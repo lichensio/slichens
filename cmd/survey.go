@@ -21,7 +21,7 @@ var surveyCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		filename, _ := cmd.Flags().GetString("filename")
 		if filename != "" {
-			survey.Survey(filename, Verbose, Freq, true)
+			survey.Survey(filename, Verbose, Freq, Sample)
 		} else {
 			fmt.Println("survey file name requiered")
 		}
@@ -38,7 +38,7 @@ func init() {
 	surveyCmd.PersistentFlags().String("filename", "", "siretta filename Lxxxxx.csv")
 	surveyCmd.PersistentFlags().BoolVarP(&Verbose, "verbose", "v", false, "verbose statistic output")
 	surveyCmd.PersistentFlags().BoolVarP(&Freq, "band", "b", false, "Sorted by frequency band")
-	surveyCmd.PersistentFlags().BoolVarP(&Sample, "exclude", "s", false, "Sorted by frequency band")
+	surveyCmd.PersistentFlags().BoolVarP(&Sample, "exclude", "s", false, "Remove CellID having less than 3 samples")
 	// Cobra supports local flags which will only run when this command
 	// is called directly, e.g.:
 	// surveyCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
