@@ -13,13 +13,8 @@ import (
 // gainCmd represents the gain command
 var gainCmd = &cobra.Command{
 	Use:   "gain",
-	Short: "A brief description of your command",
-	Long: `A longer description that spans multiple lines and likely contains examples
-and usage of using your command. For example:
-
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
+	Short: "To evaluate the possible gain between the initial indoor survey and the improved survey ",
+	Long:  `To evaluate the possible gain between the initial indoor survey and the improved survey.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		out, _ := cmd.Flags().GetString("indoor")
 		in, _ := cmd.Flags().GetString("mbooster")
