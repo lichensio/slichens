@@ -5,8 +5,8 @@ package cmd
 
 import (
 	"fmt"
+	"github.com/lichensio/slichens/pkg/attenuation"
 	"github.com/spf13/cobra"
-	"slichens/pkg/attenuation"
 )
 
 // attenuationCmd represents the attenuation command

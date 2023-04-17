@@ -5,7 +5,7 @@ package cmd
 
 import (
 	"fmt"
-	"slichens/pkg/gain"
+	"github.com/lichensio/slichens/pkg/gain"
 
 	"github.com/spf13/cobra"
 )

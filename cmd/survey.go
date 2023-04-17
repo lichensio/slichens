@@ -5,8 +5,8 @@ package cmd
 
 import (
 	"fmt"
+	"github.com/lichensio/slichens/pkg/survey"
 	"github.com/spf13/cobra"
-	"slichens/pkg/survey"
 )
 
 var Verbose bool

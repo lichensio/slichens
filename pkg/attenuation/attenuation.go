@@ -4,9 +4,9 @@ import (
 	_ "encoding/csv"
 	"fmt"
 	"github.com/jedib0t/go-pretty/v6/table"
+	"github.com/lichensio/slichens/pkg/slichens"
 	"math"
 	"os"
-	"slichens/pkg/slichens"
 	"time"
 )
 
