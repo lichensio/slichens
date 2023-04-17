@@ -12,13 +12,8 @@ import (
 // attenuationCmd represents the attenuation command
 var attenuationCmd = &cobra.Command{
 	Use:   "attenuation",
-	Short: "A brief description of your command",
-	Long: `A longer description that spans multiple lines and likely contains examples
-and usage of using your command. For example:
-
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
+	Short: "Attenuation compare outdoor to indoor signal level",
+	Long:  `Attenuation compare outdoor to indoor signal level.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		out, _ := cmd.Flags().GetString("outfile")
 		in, _ := cmd.Flags().GetString("infile")
