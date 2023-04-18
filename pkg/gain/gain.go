@@ -166,7 +166,7 @@ func Gain(fileOut, fileIn string, allStat, freq, sample bool) {
 			tej.AppendHeader(table.Row{"MNO", "BAND", "CellID", "# Min", "Indoor RSRP Avg"})
 			for _, item := range rejectiono.Data {
 				tej.AppendRows([]table.Row{
-					{item.Keys.NetName, item.Keys.Band, item.Keys.CellID, item.Number, item.RSRPavOut},
+					{item.Keys.NetName, item.Keys.Band, item.Keys.CellID, item.Number, math.Floor(item.RSRPavOut*100) / 100},
 				})
 			}
 		}
@@ -197,7 +197,7 @@ func Gain(fileOut, fileIn string, allStat, freq, sample bool) {
 			// teji.AppendHeader(table.Row{"MNO", "BAND", "CellID"})
 			for _, item := range rejectioni.Data {
 				teji.AppendRows([]table.Row{
-					{item.Keys.NetName, item.Keys.Band, item.Keys.CellID, item.Number, item.RSRPavIn},
+					{item.Keys.NetName, item.Keys.Band, item.Keys.CellID, item.Number, math.Floor(item.RSRPavIn*100) / 100},
 				})
 			}
 		}
