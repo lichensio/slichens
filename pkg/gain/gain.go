@@ -175,10 +175,10 @@ func Gain(fileOut, fileIn string, allStat, freq, sample bool) {
 			}
 		}
 		tej.Render()
-		r, rerr := os.Create("RJ" + currentTime.Format("010220061504") + ".csv")
-		slichens.Check(rerr)
-		defer r.Close()
-		tej.SetOutputMirror(r)
+		r1, rer1 := os.Create("RJ1-" + currentTime.Format("010220061504") + ".csv")
+		slichens.Check(rer1)
+		defer r1.Close()
+		tej.SetOutputMirror(r1)
 		tej.RenderCSV()
 		// tej.RenderCSV()
 		// rejection 2
@@ -206,6 +206,11 @@ func Gain(fileOut, fileIn string, allStat, freq, sample bool) {
 			}
 		}
 		teji.Render()
+		r2, rer2 := os.Create("RJ2-" + currentTime.Format("010220061504") + ".csv")
+		slichens.Check(rer2)
+		defer r2.Close()
+		tej.SetOutputMirror(r2)
+		tej.RenderCSV()
 		// teji.RenderCSV()
 
 		f, err := os.Create("GA" + currentTime.Format("010220061504") + ".csv")
