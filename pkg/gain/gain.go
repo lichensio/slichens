@@ -129,7 +129,7 @@ func Gain(fileOut, fileIn string, allStat, freq, sample bool) {
 		tsm.SetTitle("Indoor \n intial/Improved Survey : " + summary_in.SurveyType)
 		if !allStat {
 			tsm.SetOutputMirror(os.Stdout)
-			tsm.AppendHeader(table.Row{"MNO", "BAND", "CellID", "Outdoor RSRP Avg", "Indoor RSRP Avg", "Delta RSRP"})
+			tsm.AppendHeader(table.Row{"MNO", "BAND", "CellID", "Indoor RSRP Avg", "Improved RSRP Avg", "Delta RSRP"})
 			for _, item := range merge.Data {
 				tsm.AppendRows([]table.Row{
 					{item.Keys.NetName, item.Keys.Band, item.Keys.CellID,
@@ -139,7 +139,7 @@ func Gain(fileOut, fileIn string, allStat, freq, sample bool) {
 		} else {
 
 			tsm.SetOutputMirror(os.Stdout)
-			tsm.AppendHeader(table.Row{"MNO", "BAND", "CellID", "# Min", "Delta Outdoor/Indoor", "Outdoor RSRP min", "Outdoor RSRP Avg", "Outdoor RSRP max", "Outdoor RSRP SD", "Indoor RSRP min", "Indoor RSRP Avg", "Indoor RSRP max", "Indoor RSRP SD"})
+			tsm.AppendHeader(table.Row{"MNO", "BAND", "CellID", "# Min", "Delta Indoor/Improved", "Indoor RSRP min", "Indoor RSRP Avg", "Indoor RSRP max", "Indoor RSRP SD", "Improved RSRP min", "Improved RSRP Avg", "Improved RSRP max", "Improved RSRP SD"})
 			for _, item := range merge.Data {
 				tsm.AppendRows([]table.Row{
 					{item.Keys.NetName, item.Keys.Band, item.Keys.CellID, item.Number, math.Floor(item.DeltaRSRP*100) / 100,
