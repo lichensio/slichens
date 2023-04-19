@@ -420,15 +420,15 @@ func SurveyMergeOutIn(out, in SurveyAvgData) (SurveyOutInSummary, SurveyOutInSum
 			rejo.Data = append(rejo.Data, avgOutIn)
 		}
 	}
-	for _, itemo := range in {
+	for _, itemi := range in {
 		tej = false
-		for _, itemi := range out {
+		for _, itemo := range out {
 			if itemo.Keys == itemi.Keys {
 				tej = true
 			}
 		}
 		if !tej {
-			avgOutIn.Keys = itemo.Keys
+			avgOutIn.Keys = itemi.Keys
 			reji.Data = append(reji.Data, avgOutIn)
 		}
 	}
