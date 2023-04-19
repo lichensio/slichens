@@ -1,3 +1,13 @@
+/*
+ * Copyright © 2023 LICHENS http://www.lichens.io
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the “Software”), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
+
 package gain
 
 import (
@@ -117,9 +127,9 @@ func Gain(fileOut, fileIn string, allStat, freq, sample bool) {
 		tsm := table.NewWriter()
 		tsm.SetAutoIndex(true)
 		tsm.SetTitle("Indoor \n intial/Improved Survey : " + summary_in.SurveyType)
+		tsm.SetOutputMirror(os.Stdout)
 		if !allStat {
-			tsm.SetOutputMirror(os.Stdout)
-			tsm.AppendHeader(table.Row{"MNO", "BAND", "CellID", "Outdoor RSRP Avg", "Indoor RSRP Avg", "Delta RSRP"})
+			tsm.AppendHeader(table.Row{"MNO", "BAND", "CellID", "Indoor RSRP Avg", "Improved RSRP Avg", "Delta RSRP"})
 			for _, item := range merge.Data {
 				tsm.AppendRows([]table.Row{
 					{item.Keys.NetName, item.Keys.Band, item.Keys.CellID,
@@ -127,9 +137,7 @@ func Gain(fileOut, fileIn string, allStat, freq, sample bool) {
 				})
 			}
 		} else {
-
-			tsm.SetOutputMirror(os.Stdout)
-			tsm.AppendHeader(table.Row{"MNO", "BAND", "CellID", "# Min", "Delta Outdoor/Indoor", "Outdoor RSRP min", "Outdoor RSRP Avg", "Outdoor RSRP max", "Outdoor RSRP SD", "Indoor RSRP min", "Indoor RSRP Avg", "Indoor RSRP max", "Indoor RSRP SD"})
+			tsm.AppendHeader(table.Row{"MNO", "BAND", "CellID", "# Min", "Delta Indoor/Improved", "Indoor RSRP min", "Indoor RSRP Avg", "Indoor RSRP max", "Indoor RSRP SD", "Improved RSRP min", "Improved RSRP Avg", "Improved RSRP max", "Improved RSRP SD"})
 			for _, item := range merge.Data {
 				tsm.AppendRows([]table.Row{
 					{item.Keys.NetName, item.Keys.Band, item.Keys.CellID, item.Number, math.Floor(item.DeltaRSRP*100) / 100,
@@ -146,8 +154,8 @@ func Gain(fileOut, fileIn string, allStat, freq, sample bool) {
 		tej.SetAutoIndex(true)
 		tej.SetAllowedRowLength(100)
 		tej.SetTitle("Indoor \n initial/Indoor improved Survey : " + summary_in.SurveyType + "\n Rejection 1")
+		tej.SetOutputMirror(os.Stdout)
 		if !allStat {
-			tej.SetOutputMirror(os.Stdout)
 			tej.AppendHeader(table.Row{"MNO", "BAND", "CellID"})
 			for _, item := range rejectiono.Data {
 				tej.AppendRows([]table.Row{
@@ -155,20 +163,18 @@ func Gain(fileOut, fileIn string, allStat, freq, sample bool) {
 				})
 			}
 		} else {
-
-			tej.SetOutputMirror(os.Stdout)
-			tej.AppendHeader(table.Row{"MNO", "BAND", "CellID"})
+			tej.AppendHeader(table.Row{"MNO", "BAND", "CellID", "# Min", "Indoor RSRP Avg"})
 			for _, item := range rejectiono.Data {
 				tej.AppendRows([]table.Row{
-					{item.Keys.NetName, item.Keys.Band, item.Keys.CellID},
+					{item.Keys.NetName, item.Keys.Band, item.Keys.CellID, item.Number, math.Floor(item.RSRPavOut*100) / 100},
 				})
 			}
 		}
 		tej.Render()
-		r, rerr := os.Create("RJ" + currentTime.Format("010220061504") + ".csv")
-		slichens.Check(rerr)
-		defer r.Close()
-		tej.SetOutputMirror(r)
+		r1, rer1 := os.Create("RJ1-" + currentTime.Format("010220061504") + ".csv")
+		slichens.Check(rer1)
+		defer r1.Close()
+		tej.SetOutputMirror(r1)
 		tej.RenderCSV()
 		// tej.RenderCSV()
 		// rejection 2
@@ -191,11 +197,16 @@ func Gain(fileOut, fileIn string, allStat, freq, sample bool) {
 			// teji.AppendHeader(table.Row{"MNO", "BAND", "CellID"})
 			for _, item := range rejectioni.Data {
 				teji.AppendRows([]table.Row{
-					{item.Keys.NetName, item.Keys.Band, item.Keys.CellID},
+					{item.Keys.NetName, item.Keys.Band, item.Keys.CellID, item.Number, math.Floor(item.RSRPavIn*100) / 100},
 				})
 			}
 		}
 		teji.Render()
+		r2, rer2 := os.Create("RJ2-" + currentTime.Format("010220061504") + ".csv")
+		slichens.Check(rer2)
+		defer r2.Close()
+		tej.SetOutputMirror(r2)
+		tej.RenderCSV()
 		// teji.RenderCSV()
 
 		f, err := os.Create("GA" + currentTime.Format("010220061504") + ".csv")
