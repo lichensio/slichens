@@ -423,6 +423,7 @@ func SurveyMergeOutIn(out, in SurveyAvgData) (SurveyOutInSummary, SurveyOutInSum
 				avgOutIn.Number = min(itemo.Number, itemi.Number)
 				res.Data = append(res.Data, avgOutIn)
 				tej = true
+				break
 			}
 		}
 		if !tej {
@@ -435,6 +436,7 @@ func SurveyMergeOutIn(out, in SurveyAvgData) (SurveyOutInSummary, SurveyOutInSum
 		for _, itemo := range out {
 			if itemo.Keys == itemi.Keys {
 				tej = true
+				break
 			}
 		}
 		if !tej {
@@ -457,4 +459,63 @@ func min[T constraints.Ordered](a, b T) T {
 		return a
 	}
 	return b
+}
+
+func SurveyMergeOutIn2(out, in SurveyAvgData) (SurveyOutInSummary, SurveyOutInSummary, SurveyOutInSummary) {
+
+	var res, rejo, reji SurveyOutInSummary
+
+	m := make(map[SurveyKey]uint8)
+	itemo := make(map[SurveyKey]SurveyAvg)
+	itemi := make(map[SurveyKey]SurveyAvg)
+	for _, k := range out {
+		itemo[k.Keys] = k
+	}
+	for _, k := range in {
+		itemi[k.Keys] = k
+	}
+	for _, k := range out {
+		m[k.Keys] |= (1 << 0)
+	}
+	for _, k := range in {
+		m[k.Keys] |= (1 << 1)
+	}
+	for k, v := range m {
+		var avgOutIn SurveyAvgOutIn
+		a := v&(1<<0) != 0
+		b := v&(1<<1) != 0
+		switch {
+		case a && b:
+			avgOutIn.Keys = k
+			avgOutIn.RSRPavOut = itemo[k].RSRPav
+			avgOutIn.RSRPavIn = itemi[k].RSRPav
+			avgOutIn.RSRPmaxOut = itemo[k].RSRPmax
+			avgOutIn.RSRPmaxIn = itemi[k].RSRPmax
+			avgOutIn.RSRPminOut = itemo[k].RSRPmin
+			avgOutIn.RSRPminIn = itemi[k].RSRPmin
+			avgOutIn.RSRPStandardDeviationOut = itemo[k].RSRPStandardDeviation
+			avgOutIn.RSRPStandardDeviationIn = itemi[k].RSRPStandardDeviation
+			avgOutIn.DeltaRSRP = -itemo[k].RSRPav + itemi[k].RSRPav
+			avgOutIn.DeltaRSRQ = -itemo[k].RSRQav + itemi[k].RSRQav
+			avgOutIn.Number = min(itemo[k].Number, itemi[k].Number)
+			res.Data = append(res.Data, avgOutIn)
+		case a && !b:
+			avgOutIn.Keys = k
+			avgOutIn.RSRPavOut = itemo[k].RSRPav
+			avgOutIn.RSRPmaxOut = itemo[k].RSRPmax
+			avgOutIn.RSRPminOut = itemo[k].RSRPmin
+			avgOutIn.RSRPStandardDeviationOut = itemo[k].RSRPStandardDeviation
+			avgOutIn.Number = itemo[k].Number
+			rejo.Data = append(rejo.Data, avgOutIn)
+		case !a && b:
+			avgOutIn.Keys = k
+			avgOutIn.RSRPavIn = itemi[k].RSRPav
+			avgOutIn.RSRPmaxIn = itemi[k].RSRPmax
+			avgOutIn.RSRPminIn = itemi[k].RSRPmin
+			avgOutIn.RSRPStandardDeviationIn = itemi[k].RSRPStandardDeviation
+			avgOutIn.Number = itemi[k].Number
+			reji.Data = append(reji.Data, avgOutIn)
+		}
+	}
+	return res, rejo, reji
 }

@@ -122,7 +122,7 @@ func Attenuation(fileOut, fileIn string, allStat, freq, sample bool) {
 		}
 		tsin.Render()
 		// tsin.RenderCSV()
-		merge, rejectiono, rejectioni := slichens.SurveyMergeOutIn(summary_out.Avg, summary_in.Avg)
+		merge, rejectiono, rejectioni := slichens.SurveyMergeOutIn2(summary_out.Avg, summary_in.Avg)
 		ts.ResetRows()
 		tsm := table.NewWriter()
 		tsm.SetAutoIndex(true)

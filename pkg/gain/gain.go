@@ -122,7 +122,7 @@ func Gain(fileOut, fileIn string, allStat, freq, sample bool) {
 		tsin.Render()
 		// tsin.RenderCSV()
 
-		merge, rejectiono, rejectioni := slichens.SurveyMergeOutIn(summary_out.Avg, summary_in.Avg)
+		merge, rejectiono, rejectioni := slichens.SurveyMergeOutIn2(summary_out.Avg, summary_in.Avg)
 		ts.ResetRows()
 		tsm := table.NewWriter()
 		tsm.SetAutoIndex(true)
@@ -179,7 +179,7 @@ func Gain(fileOut, fileIn string, allStat, freq, sample bool) {
 		// tej.RenderCSV()
 		// rejection 2
 		teji := tej //table.NewWriter()
-		ts.ResetRows()
+		teji.ResetRows()
 		teji.SetAutoIndex(true)
 		teji.SetAllowedRowLength(100)
 		teji.SetTitle("Indoor \n initial/improved Survey : " + summary_in.SurveyType + "\n Rejection 2")
