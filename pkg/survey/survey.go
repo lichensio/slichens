@@ -45,7 +45,7 @@ func Survey(filename string, allStat, freq, sample bool) {
 		surveys := survey.Surveys
 
 		if freq {
-			slichens.OrderedBy(band, cellid, netname).Sort(surveys)
+			slichens.OrderedBy(band, netname, cellid).Sort(surveys)
 		} else {
 			slichens.OrderedBy(netname, band, cellid).Sort(surveys)
 		}

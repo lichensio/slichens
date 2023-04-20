@@ -39,6 +39,18 @@ func Attenuation(fileOut, fileIn string, allStat, freq, sample bool) {
 			return c1.Keys.Band < c2.Keys.Band
 		}
 
+		netnameSAOI := func(c1, c2 *slichens.SurveyAvgOutIn) bool {
+			return c1.Keys.NetName < c2.Keys.NetName
+		}
+
+		cellidSAOI := func(c1, c2 *slichens.SurveyAvgOutIn) bool {
+			return c1.Keys.CellID < c2.Keys.CellID
+		}
+
+		bandSAOI := func(c1, c2 *slichens.SurveyAvgOutIn) bool {
+			return c1.Keys.Band < c2.Keys.Band
+		}
+
 		survey_out, _ := slichens.ReadMultiCSV(fileOut)
 		survey_in, _ := slichens.ReadMultiCSV(fileIn)
 
@@ -46,8 +58,8 @@ func Attenuation(fileOut, fileIn string, allStat, freq, sample bool) {
 		surveysi := survey_in.Surveys
 
 		if freq {
-			slichens.OrderedBy(band, cellid, netname).Sort(surveyso)
-			slichens.OrderedBy(band, cellid, netname).Sort(surveysi)
+			slichens.OrderedBy(band, netname, cellid).Sort(surveyso)
+			slichens.OrderedBy(band, netname, cellid).Sort(surveysi)
 		} else {
 			slichens.OrderedBy(netname, band, cellid).Sort(surveyso)
 			slichens.OrderedBy(netname, band, cellid).Sort(surveysi)
@@ -124,6 +136,15 @@ func Attenuation(fileOut, fileIn string, allStat, freq, sample bool) {
 		// tsin.RenderCSV()
 		merge, rejectiono, rejectioni := slichens.SurveyMergeOutIn2(summary_out.Avg, summary_in.Avg)
 
+		if freq {
+			slichens.OrderedBySAOI(bandSAOI, netnameSAOI, cellidSAOI).SortSAOI(merge.Data)
+			slichens.OrderedBySAOI(bandSAOI, netnameSAOI, cellidSAOI).SortSAOI(rejectioni.Data)
+			slichens.OrderedBySAOI(bandSAOI, netnameSAOI, cellidSAOI).SortSAOI(rejectiono.Data)
+		} else {
+			slichens.OrderedBySAOI(netnameSAOI, bandSAOI, cellidSAOI).SortSAOI(merge.Data)
+			slichens.OrderedBySAOI(netnameSAOI, bandSAOI, cellidSAOI).SortSAOI(rejectioni.Data)
+			slichens.OrderedBySAOI(bandSAOI, netnameSAOI, cellidSAOI).SortSAOI(rejectiono.Data)
+		}
 		tsm := table.NewWriter()
 		tsm.ResetRows()
 		tsm.SetAutoIndex(true)
@@ -168,10 +189,10 @@ func Attenuation(fileOut, fileIn string, allStat, freq, sample bool) {
 		} else {
 
 			tej.SetOutputMirror(os.Stdout)
-			tej.AppendHeader(table.Row{"MNO", "BAND", "CellID"})
+			tej.AppendHeader(table.Row{"MNO", "BAND", "CellID", "# Min", "Indoor RSRP Avg"})
 			for _, item := range rejectiono.Data {
 				tej.AppendRows([]table.Row{
-					{item.Keys.NetName, item.Keys.Band, item.Keys.CellID},
+					{item.Keys.NetName, item.Keys.Band, item.Keys.CellID, item.Number, math.Floor(item.RSRPavOut*100) / 100},
 				})
 			}
 		}
@@ -202,7 +223,7 @@ func Attenuation(fileOut, fileIn string, allStat, freq, sample bool) {
 			// teji.AppendHeader(table.Row{"MNO", "BAND", "CellID"})
 			for _, item := range rejectioni.Data {
 				teji.AppendRows([]table.Row{
-					{item.Keys.NetName, item.Keys.Band, item.Keys.CellID},
+					{item.Keys.NetName, item.Keys.Band, item.Keys.CellID, item.Number, math.Floor(item.RSRPavIn*100) / 100},
 				})
 			}
 		}

@@ -37,6 +37,17 @@ func Gain(fileOut, fileIn string, allStat, freq, sample bool) {
 		band := func(c1, c2 *slichens.SurveyData) bool {
 			return c1.Keys.Band < c2.Keys.Band
 		}
+		netnameSAOI := func(c1, c2 *slichens.SurveyAvgOutIn) bool {
+			return c1.Keys.NetName < c2.Keys.NetName
+		}
+
+		cellidSAOI := func(c1, c2 *slichens.SurveyAvgOutIn) bool {
+			return c1.Keys.CellID < c2.Keys.CellID
+		}
+
+		bandSAOI := func(c1, c2 *slichens.SurveyAvgOutIn) bool {
+			return c1.Keys.Band < c2.Keys.Band
+		}
 
 		survey_out, _ := slichens.ReadMultiCSV(fileOut)
 		survey_in, _ := slichens.ReadMultiCSV(fileIn)
@@ -123,6 +134,16 @@ func Gain(fileOut, fileIn string, allStat, freq, sample bool) {
 		// tsin.RenderCSV()
 
 		merge, rejectiono, rejectioni := slichens.SurveyMergeOutIn2(summary_out.Avg, summary_in.Avg)
+
+		if freq {
+			slichens.OrderedBySAOI(bandSAOI, netnameSAOI, cellidSAOI).SortSAOI(merge.Data)
+			slichens.OrderedBySAOI(bandSAOI, netnameSAOI, cellidSAOI).SortSAOI(rejectioni.Data)
+			slichens.OrderedBySAOI(bandSAOI, netnameSAOI, cellidSAOI).SortSAOI(rejectiono.Data)
+		} else {
+			slichens.OrderedBySAOI(netnameSAOI, bandSAOI, cellidSAOI).SortSAOI(merge.Data)
+			slichens.OrderedBySAOI(netnameSAOI, bandSAOI, cellidSAOI).SortSAOI(rejectioni.Data)
+			slichens.OrderedBySAOI(bandSAOI, netnameSAOI, cellidSAOI).SortSAOI(rejectiono.Data)
+		}
 		ts.ResetRows()
 		tsm := table.NewWriter()
 		tsm.SetAutoIndex(true)
