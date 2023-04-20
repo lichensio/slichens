@@ -123,8 +123,9 @@ func Attenuation(fileOut, fileIn string, allStat, freq, sample bool) {
 		tsin.Render()
 		// tsin.RenderCSV()
 		merge, rejectiono, rejectioni := slichens.SurveyMergeOutIn2(summary_out.Avg, summary_in.Avg)
-		ts.ResetRows()
+
 		tsm := table.NewWriter()
+		tsm.ResetRows()
 		tsm.SetAutoIndex(true)
 		tsm.SetTitle("Outdoor/Indoor Survey: " + summary_in.SurveyType)
 		if !allStat {
@@ -183,7 +184,7 @@ func Attenuation(fileOut, fileIn string, allStat, freq, sample bool) {
 		// tej.RenderCSV()
 		// rejection 2
 		teji := tej //table.NewWriter()
-		ts.ResetRows()
+		teji.ResetRows()
 		teji.SetAutoIndex(true)
 		teji.SetAllowedRowLength(100)
 		teji.SetTitle("Outdoor/Indoor Survey : " + summary_in.SurveyType + "\n Rejection 2")
