@@ -12,8 +12,11 @@ package slichens
 
 import (
 	"encoding/csv"
-	"github.com/axiomhq/variance"
+	"github.com/jedib0t/go-pretty/v6/table"
+	"github.com/lichensio/slichens/pkg/student"
 	"golang.org/x/exp/constraints"
+	"gonum.org/v1/gonum/floats"
+	"gonum.org/v1/gonum/stat"
 	"io"
 	"math"
 	"os"
@@ -35,10 +38,16 @@ type SurveyResult struct {
 	FirmwareVersion    string
 	Filename           string
 	Timestamp          int
-	Surveys            SurveyDataSlice
+	Surveys            SurveyMap
 }
 
-// Survey data structure
+type SurveyKey struct {
+	Band    int    // 0 all
+	CellID  int    // 0 all
+	NetName string // all all
+}
+
+type KeySlice []SurveyKey
 
 type SurveyData struct {
 	Survey     int
@@ -67,31 +76,35 @@ type SurveyData struct {
 	UL         float64
 	NetName    string
 	Signal     string
-	Keys       SurveyKey
 }
-
-// Slice of survey data
 
 type SurveyDataSlice []SurveyData
 
-// Survey basic statistic data, average over the samples
+type SurveyMap map[SurveyKey]SurveyDataSlice
 
-type SurveyAvg struct {
-	Keys                  SurveyKey
+type SurveyStat struct {
 	Number                uint
-	RSRPav                float64
-	RSRQav                float64
-	RSRPmax               float64
-	RSRQmax               float64
-	RSRPmin               float64
-	RSRQmin               float64
+	RSRPMean              float64
+	RSRPMedian            float64
+	RSRPMode              float64
+	RSRPRange             float64
+	RSRPQuartiles         float64
+	RSRPMin               float64
+	RSRPMax               float64
+	RSRPVariance          float64
+	RSRPSkewness          float64
+	RSRPKurtosis          float64
 	RSRPStandardDeviation float64
 }
 
-type SurveyAvgData []SurveyAvg
+type SurveyStatMap map[SurveyKey]SurveyStat
 
-type SurveyAvgOutIn struct {
-	Keys                     SurveyKey
+type SurveySummary struct {
+	SurveyType string
+	Stat       SurveyStatMap
+}
+
+type SurveyTwoSamples struct {
 	Number                   uint
 	RSRPavOut                float64
 	RSRQavOut                float64
@@ -109,30 +122,23 @@ type SurveyAvgOutIn struct {
 	RSRPStandardDeviationIn  float64
 	DeltaRSRP                float64
 	DeltaRSRQ                float64
+	T                        float64
+	P                        float64
+	Df                       float64
 }
 
-type SurveyOutInAvgData []SurveyAvgOutIn
+type SurveyTwoSamplesMap map[SurveyKey]SurveyTwoSamples
 
-type SurveyOutInSummary struct {
+type SurveyTwoSamplesSummary struct {
 	SurveyType string
-	Data       SurveyOutInAvgData
-}
-
-type SurveySummary struct {
-	SurveyType string
-	Avg        SurveyAvgData
-}
-
-type SurveyKey struct {
-	Band    int    // 0 all
-	CellID  int    // 0 all
-	NetName string // all all
+	Data       SurveyTwoSamplesMap
 }
 
 // reading from csv siretta detailled file: LXXXXX.CSV
 
 func ReadMultiCSV(filename string) (SurveyResult, error) {
 	var survey SurveyResult
+	survey.Surveys = make(map[SurveyKey]SurveyDataSlice)
 	input, err := os.Open(filename)
 	if err != nil {
 		return survey, err
@@ -173,6 +179,7 @@ func ReadMultiCSV(filename string) (SurveyResult, error) {
 	}
 	// fmt.Println(survey)
 	var surveyData SurveyData
+	var key SurveyKey
 	for {
 		r, err := reader.Read()
 		if err == io.EOF {
@@ -198,11 +205,11 @@ func ReadMultiCSV(filename string) (SurveyResult, error) {
 			surveyData.RSSI, _ = strconv.ParseFloat(r[7], 64)
 			surveyData.MCC, _ = strconv.Atoi(r[8])
 			surveyData.MNC, _ = strconv.Atoi(r[9])
-			surveyData.Keys.CellID, _ = strconv.Atoi(r[10])
+			key.CellID, _ = strconv.Atoi(r[10])
 			surveyData.LACTAC, _ = strconv.Atoi(r[11])
 			surveyData.BandNum, _ = strconv.Atoi(r[12])
 			frequencyParts := strings.Split(r[13], " ")
-			surveyData.Keys.Band, _ = strconv.Atoi(frequencyParts[0])
+			key.Band, _ = strconv.Atoi(frequencyParts[0])
 			surveyData.BSIC = r[14]
 			surveyData.SCR = r[15]
 			surveyData.ECIO = r[16]
@@ -213,8 +220,8 @@ func ReadMultiCSV(filename string) (SurveyResult, error) {
 			surveyData.BW, _ = strconv.Atoi(r[21])
 			surveyData.DL, _ = strconv.ParseFloat(r[22], 64)
 			surveyData.UL, _ = strconv.ParseFloat(r[23], 64)
-			surveyData.Keys.NetName = r[24]
-			survey.Surveys = append(survey.Surveys, surveyData)
+			key.NetName = r[24]
+			survey.Surveys[key] = append(survey.Surveys[key], surveyData)
 		}
 
 		reader.FieldsPerRecord = 0
@@ -225,16 +232,16 @@ func ReadMultiCSV(filename string) (SurveyResult, error) {
 
 // Sorting algo
 
-type lessFunc func(p1, p2 *SurveyData) bool
+type lessFunc func(p1, p2 *SurveyKey) bool
 
 // multiSorter implements the Sort interface, sorting the changes within.
 type multiSorter struct {
-	changes []SurveyData
+	changes []SurveyKey
 	less    []lessFunc
 }
 
 // Sort sorts the argument slice according to the less functions passed to OrderedBy.
-func (ms *multiSorter) Sort(changes []SurveyData) {
+func (ms *multiSorter) Sort(changes []SurveyKey) {
 	ms.changes = changes
 	sort.Sort(ms)
 }
@@ -284,146 +291,57 @@ func (ms *multiSorter) Less(i, j int) bool {
 	return ms.less[k](p, q)
 }
 
-type lessFuncSAOI func(p1, p2 *SurveyAvgOutIn) bool
-
-// multiSorter implements the Sort interface, sorting the changes within.
-type multiSorterSAOI struct {
-	changes []SurveyAvgOutIn
-	less    []lessFuncSAOI
-}
-
-// Sort sorts the argument slice according to the less functions passed to OrderedBy.
-func (ms *multiSorterSAOI) SortSAOI(changes []SurveyAvgOutIn) {
-	ms.changes = changes
-	sort.Sort(ms)
-}
-
-// OrderedBy returns a Sorter that sorts using the less functions, in order.
-// Call its Sort method to sort the data.
-func OrderedBySAOI(less ...lessFuncSAOI) *multiSorterSAOI {
-	return &multiSorterSAOI{
-		less: less,
-	}
-}
-
-// Len is part of sort.Interface.
-func (ms *multiSorterSAOI) Len() int {
-	return len(ms.changes)
-}
-
-// Swap is part of sort.Interface.
-func (ms *multiSorterSAOI) Swap(i, j int) {
-	ms.changes[i], ms.changes[j] = ms.changes[j], ms.changes[i]
-}
-
-// Less is part of sort.Interface. It is implemented by looping along the
-// less functions until it finds a comparison that discriminates between
-// the two items (one is less than the other). Note that it can call the
-// less functions twice per call. We could change the functions to return
-// -1, 0, 1 and reduce the number of calls for greater efficiency: an
-// exercise for the reader.
-func (ms *multiSorterSAOI) Less(i, j int) bool {
-	p, q := &ms.changes[i], &ms.changes[j]
-	// Try all but the last comparison.
-	var k int
-	for k = 0; k < len(ms.less)-1; k++ {
-		less := ms.less[k]
-		switch {
-		case less(p, q):
-			// p < q, so we have a decision.
-			return true
-		case less(q, p):
-			// p > q, so we have a decision.
-			return false
-		}
-		// p == q; try the next comparison.
-	}
-	// All comparisons to here said "equal", so just return whatever
-	// the final comparison reports.
-	return ms.less[k](p, q)
-}
-
-func SurveyAverage(data SurveyDataSlice) SurveySummary {
+func SurveyStatGen(data SurveyResult) SurveySummary {
 	var result SurveySummary
-	var avgsurvey SurveyAvg
-	var avgRSRP, avgRSRQ float64
-	var key SurveyKey
-	var i int
-	var min, max float64
-	max = math.Inf(-1)
-	min = math.Inf(1)
-	result.SurveyType = data[0].Network
-	key = data[0].Keys
-	statsRSRP := variance.New()
-	statsRSRQ := variance.New()
-	for _, item := range data {
-		if item.Keys == key {
-			statsRSRP.Add(item.RSRP)
-			statsRSRQ.Add(item.RSRQ)
-			avgRSRP += item.RSRP
-			avgRSRQ += item.RSRQ
-			i += 1
-			if item.RSRP > max {
-				max = item.RSRP
-			}
-			if item.RSRP < min {
-				min = item.RSRP
-			}
-		} else {
-			avgsurvey.Keys = key
-			avgsurvey.RSRPav = statsRSRP.Mean()
-			avgsurvey.RSRQav = statsRSRQ.Mean()
-			avgsurvey.RSRPStandardDeviation = statsRSRP.StandardDeviation()
-			avgsurvey.Number = statsRSRP.NumDataValues()
-			avgsurvey.RSRPmax = max
-			avgsurvey.RSRPmin = min
-			result.Avg = append(result.Avg, avgsurvey)
-			statsRSRP.Clear()
-			statsRSRQ.Clear()
-			i = 1
-			statsRSRP.Add(item.RSRP)
-			statsRSRQ.Add(item.RSRQ)
-			key = item.Keys
-			min = item.RSRP
-			max = item.RSRP
+	result.Stat = make(map[SurveyKey]SurveyStat)
+	result.SurveyType = data.SurveyType
+	for key, slice := range data.Surveys {
+		var data []float64
+		var statsurvey SurveyStat
+		for _, j := range slice {
+			data = append(data, j.RSRP)
 		}
+		sort.Float64s(data)
+		statsurvey.RSRPMax = floats.Max(data)
+		statsurvey.RSRPMin = floats.Min(data)
+		statsurvey.RSRPRange = statsurvey.RSRPMax - statsurvey.RSRPMin
+		statsurvey.Number = uint(len(data))
+		statsurvey.RSRPMean = stat.Mean(data, nil)
+		statsurvey.RSRPVariance = stat.Variance(data, nil)
+		statsurvey.RSRPStandardDeviation = math.Sqrt(statsurvey.RSRPVariance)
+		statsurvey.RSRPMedian = stat.Quantile(0.5, stat.Empirical, data, nil)
 
-	}
-	avgsurvey.Keys = key
-	avgsurvey.RSRPav = statsRSRP.Mean()
-	avgsurvey.RSRQav = statsRSRQ.Mean()
-	avgsurvey.RSRPStandardDeviation = statsRSRP.StandardDeviation()
-	if data[len(data)-1].RSRP > max {
-		max = data[len(data)-1].RSRP
-	}
-	if data[len(data)-1].RSRP < min {
-		min = data[len(data)-1].RSRP
-	}
-	avgsurvey.RSRPmax = max
-	avgsurvey.RSRPmin = min
-	avgsurvey.Number = statsRSRP.NumDataValues()
-	result.Avg = append(result.Avg, avgsurvey)
-	return result
-}
+		result.Stat[key] = statsurvey
 
-func SampleRemove(data SurveyAvgData, number uint) SurveyAvgData {
-	var result SurveyAvgData
-	for _, item := range data {
-		if number < item.Number {
-			result = append(result, item)
-		}
 	}
 	return result
 }
 
-func Select(data SurveyAvgData, filter SurveyKey) SurveyAvgData {
-	var result SurveyAvgData
-	for _, item := range data {
-		if KeyFilter(item.Keys, filter) {
-			result = append(result, item)
+func Select(data SurveyStatMap, filter SurveyKey) SurveyStatMap {
+	for k, _ := range data {
+		if !KeyFilter(k, filter) {
+			delete(data, k)
 		}
 	}
-	return result
+	return data
+}
+
+func SurveySampleRemove(data SurveyMap, number int) SurveyMap {
+	for key, item := range data {
+		if len(item) < number+1 {
+			delete(data, key)
+		}
+	}
+	return data
+}
+
+func StatRemove(data SurveyStatMap, level float64) SurveyStatMap {
+	for key, item := range data {
+		if item.RSRPMean <= level {
+			delete(data, key)
+		}
+	}
+	return data
 }
 
 func KeyFilter(item, filter SurveyKey) bool {
@@ -458,53 +376,176 @@ func KeyFilter(item, filter SurveyKey) bool {
 	return false
 }
 
-func SurveyMergeOutIn(out, in SurveyAvgData) (SurveyOutInSummary, SurveyOutInSummary, SurveyOutInSummary) {
-
-	var res, rejo, reji SurveyOutInSummary
-	var avgOutIn SurveyAvgOutIn
+func SurveyTwoSamplesMerge(out, in SurveySummary) (SurveyTwoSamplesSummary, SurveyTwoSamplesSummary, SurveyTwoSamplesSummary) {
+	var res, rejo, reji SurveyTwoSamplesSummary
+	res.Data = make(map[SurveyKey]SurveyTwoSamples)
+	rejo.Data = make(map[SurveyKey]SurveyTwoSamples)
+	reji.Data = make(map[SurveyKey]SurveyTwoSamples)
+	res.SurveyType = out.SurveyType
+	var avgOutIn SurveyTwoSamples
 	// res.SurveyType =
 	var tej bool
-	for _, itemo := range out {
+	for keyo, itemo := range out.Stat {
 		tej = false
-		for _, itemi := range in {
-			if itemo.Keys == itemi.Keys {
-				avgOutIn.Keys = itemo.Keys
-				avgOutIn.RSRPavOut = itemo.RSRPav
-				avgOutIn.RSRPavIn = itemi.RSRPav
-				avgOutIn.RSRPmaxOut = itemo.RSRPmax
-				avgOutIn.RSRPmaxIn = itemi.RSRPmax
-				avgOutIn.RSRPminOut = itemo.RSRPmin
-				avgOutIn.RSRPminIn = itemi.RSRPmin
+		for keyi, itemi := range in.Stat {
+			if keyo == keyi {
+
+				avgOutIn.RSRPavOut = itemo.RSRPMean
+				avgOutIn.RSRPavIn = itemi.RSRPMean
+				avgOutIn.RSRPmaxOut = itemo.RSRPMax
+				avgOutIn.RSRPmaxIn = itemi.RSRPMax
+				avgOutIn.RSRPminOut = itemo.RSRPMin
+				avgOutIn.RSRPminIn = itemi.RSRPMin
 				avgOutIn.RSRPStandardDeviationOut = itemo.RSRPStandardDeviation
 				avgOutIn.RSRPStandardDeviationIn = itemi.RSRPStandardDeviation
-				avgOutIn.DeltaRSRP = -itemo.RSRPav + itemi.RSRPav
-				avgOutIn.DeltaRSRQ = -itemo.RSRQav + itemi.RSRQav
+				avgOutIn.DeltaRSRP = -itemo.RSRPMean + itemi.RSRPMean
 				avgOutIn.Number = min(itemo.Number, itemi.Number)
-				res.Data = append(res.Data, avgOutIn)
+
+				s2no := avgOutIn.RSRPStandardDeviationOut * avgOutIn.RSRPStandardDeviationOut / float64(itemo.Number)
+				s2ni := avgOutIn.RSRPStandardDeviationIn * avgOutIn.RSRPStandardDeviationIn / float64(itemi.Number)
+				avgOutIn.T = (avgOutIn.RSRPavOut*avgOutIn.RSRPavOut - avgOutIn.RSRPavIn*avgOutIn.RSRPavIn) / math.Sqrt(s2no+s2ni)
+				avgOutIn.Df = math.Pow(s2no+s2ni, 2.0) / (math.Pow(s2no, 2.0)/(float64(itemo.Number)-1.0) + math.Pow(s2ni, 2.0)/(float64(itemi.Number)-1.0))
+				avgOutIn.P = 2 * (1 - student.StudentCDF(avgOutIn.T, avgOutIn.Df))
+				res.Data[keyo] = avgOutIn
 				tej = true
 				break
 			}
 		}
 		if !tej {
-			avgOutIn.Keys = itemo.Keys
-			rejo.Data = append(rejo.Data, avgOutIn)
+			// fmt.Println(itemo.Number)
+			avgOutIn.RSRPavOut = itemo.RSRPMean
+			avgOutIn.Number = itemo.Number
+			rejo.Data[keyo] = avgOutIn
+
 		}
 	}
-	for _, itemi := range in {
+	for keyi, itemi := range in.Stat {
 		tej = false
-		for _, itemo := range out {
-			if itemo.Keys == itemi.Keys {
+		for keyo, _ := range out.Stat {
+			if keyo == keyi {
 				tej = true
-				break
 			}
 		}
 		if !tej {
-			avgOutIn.Keys = itemi.Keys
-			reji.Data = append(reji.Data, avgOutIn)
+			// fmt.Println(itemi.Number)
+			avgOutIn.Number = itemi.Number
+			reji.Data[keyi] = avgOutIn
 		}
 	}
 
 	return res, rejo, reji
+}
+
+func KeysSurvey(survey SurveyMap) []SurveyKey {
+	res := make([]SurveyKey, 0, len(survey))
+	for k := range survey {
+		res = append(res, k)
+	}
+	return res
+}
+
+func GetKeys[K SurveyKey, V any](m map[K]V) []K {
+	keys := make([]K, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
+	}
+	return keys
+}
+
+func SurveyConsolePrint(title string, currentTime time.Time, all bool, sortedKeys []SurveyKey, surveySummary SurveySummary) {
+	// table formatting
+	ts := table.NewWriter()
+	ts.SetTitle(title + surveySummary.SurveyType)
+	ts.SetAutoIndex(true)
+	if !all {
+		ts.SetOutputMirror(os.Stdout)
+		ts.AppendHeader(table.Row{"MNO", "BAND", "CellID", "RSRP Avg"})
+		for _, k := range sortedKeys {
+			ts.AppendRows([]table.Row{
+				{k.NetName, k.Band, k.CellID,
+					math.Floor(surveySummary.Stat[k].RSRPMean*100) / 100},
+			})
+		}
+	} else {
+
+		ts.SetOutputMirror(os.Stdout)
+		ts.AppendHeader(table.Row{"MNO", "BAND", "CellID", "#", "RSRP min", "RSRP Avg", "RSRP max", "RSRP SD"})
+		for _, k := range sortedKeys {
+			ts.AppendRows([]table.Row{
+				{k.NetName, k.Band, k.CellID, surveySummary.Stat[k].Number,
+					math.Floor(surveySummary.Stat[k].RSRPMin*100) / 100, math.Floor(surveySummary.Stat[k].RSRPMean*100) / 100, math.Floor(surveySummary.Stat[k].RSRPMax*100) / 100, math.Floor(surveySummary.Stat[k].RSRPStandardDeviation*100) / 100},
+			})
+		}
+	}
+	ts.Render()
+	f, err := os.Create(title + currentTime.Format("010220061504") + ".csv")
+	Check(err)
+	defer f.Close()
+	ts.SetOutputMirror(f)
+	ts.RenderCSV()
+
+}
+
+func TwoSampleConsoleIntersectPrint(title string, currentTime time.Time, all bool, sortedKeys []SurveyKey, surveyStatSummary SurveyTwoSamplesSummary) {
+	tsm := table.NewWriter()
+	tsm.SetAutoIndex(true)
+	tsm.SetTitle(title + surveyStatSummary.SurveyType)
+	if !all {
+		tsm.SetOutputMirror(os.Stdout)
+		tsm.AppendHeader(table.Row{"MNO", "BAND", "CellID", "Outdoor RSRP Avg", "Indoor RSRP Avg", "Delta RSRP", "t", "p"})
+		for _, k := range sortedKeys {
+			tsm.AppendRows([]table.Row{
+				{k.NetName, k.Band, k.CellID,
+					math.Floor(surveyStatSummary.Data[k].RSRPavOut*100) / 100, math.Floor(surveyStatSummary.Data[k].RSRPavIn*100) / 100, math.Floor(surveyStatSummary.Data[k].DeltaRSRP*100) / 100, math.Floor(surveyStatSummary.Data[k].T*100) / 100, math.Floor(surveyStatSummary.Data[k].P*100) / 100},
+			})
+		}
+	} else {
+
+		tsm.SetOutputMirror(os.Stdout)
+		tsm.AppendHeader(table.Row{"MNO", "BAND", "CellID", "#", "Delta Outdoor/Indoor", "Outdoor RSRP min", "Outdoor RSRP Avg", "Outdoor RSRP max", "Outdoor RSRP SD", "Indoor RSRP min", "Indoor RSRP Avg", "Indoor RSRP max", "Indoor RSRP SD", "t", "p"})
+		for _, k := range sortedKeys {
+			tsm.AppendRows([]table.Row{
+				{k.NetName, k.Band, k.CellID, surveyStatSummary.Data[k].Number, math.Floor(surveyStatSummary.Data[k].DeltaRSRP*100) / 100,
+					math.Floor(surveyStatSummary.Data[k].RSRPminOut*100) / 100, math.Floor(surveyStatSummary.Data[k].RSRPavOut*100) / 100, math.Floor(surveyStatSummary.Data[k].RSRPmaxOut*100) / 100, math.Floor(surveyStatSummary.Data[k].RSRPStandardDeviationOut*100) / 100, math.Floor(surveyStatSummary.Data[k].RSRPminIn*100) / 100, math.Floor(surveyStatSummary.Data[k].RSRPavIn*100) / 100, math.Floor(surveyStatSummary.Data[k].RSRPmaxIn*100) / 100, math.Floor(surveyStatSummary.Data[k].RSRPStandardDeviationIn*100) / 100, math.Floor(surveyStatSummary.Data[k].T*100) / 100, math.Floor(surveyStatSummary.Data[k].P*100) / 100},
+			})
+		}
+	}
+	tsm.Render()
+	f, err := os.Create("INT" + currentTime.Format("010220061504") + ".csv")
+	Check(err)
+	defer f.Close()
+	tsm.SetOutputMirror(f)
+	tsm.RenderCSV()
+}
+
+func TwoSampleConsoleExcluPrint(title string, currentTime time.Time, all bool, sortedKeys []SurveyKey, surveyStatSummary SurveyTwoSamplesSummary) {
+	tsm := table.NewWriter()
+	tsm.SetAutoIndex(true)
+	tsm.SetTitle(title + surveyStatSummary.SurveyType)
+	if !all {
+		tsm.SetOutputMirror(os.Stdout)
+		tsm.AppendHeader(table.Row{"MNO", "BAND", "CellID"})
+		for _, k := range sortedKeys {
+			tsm.AppendRows([]table.Row{
+				{k.NetName, k.Band, k.CellID},
+			})
+		}
+	} else {
+
+		tsm.SetOutputMirror(os.Stdout)
+		tsm.AppendHeader(table.Row{"MNO", "BAND", "CellID", "#"})
+		for _, k := range sortedKeys {
+			tsm.AppendRows([]table.Row{
+				{k.NetName, k.Band, k.CellID, surveyStatSummary.Data[k].Number},
+			})
+		}
+	}
+	tsm.Render()
+	f, err := os.Create("RJ2" + currentTime.Format("010220061504") + ".csv")
+	Check(err)
+	defer f.Close()
+	tsm.SetOutputMirror(f)
+	tsm.RenderCSV()
 }
 
 func Check(e error) {
@@ -518,63 +559,4 @@ func min[T constraints.Ordered](a, b T) T {
 		return a
 	}
 	return b
-}
-
-func SurveyMergeOutIn2(out, in SurveyAvgData) (SurveyOutInSummary, SurveyOutInSummary, SurveyOutInSummary) {
-
-	var res, rejo, reji SurveyOutInSummary
-
-	m := make(map[SurveyKey]uint8)
-	itemo := make(map[SurveyKey]SurveyAvg)
-	itemi := make(map[SurveyKey]SurveyAvg)
-	for _, k := range out {
-		itemo[k.Keys] = k
-	}
-	for _, k := range in {
-		itemi[k.Keys] = k
-	}
-	for _, k := range out {
-		m[k.Keys] |= (1 << 0)
-	}
-	for _, k := range in {
-		m[k.Keys] |= (1 << 1)
-	}
-	for k, v := range m {
-		var avgOutIn SurveyAvgOutIn
-		a := v&(1<<0) != 0
-		b := v&(1<<1) != 0
-		switch {
-		case a && b:
-			avgOutIn.Keys = k
-			avgOutIn.RSRPavOut = itemo[k].RSRPav
-			avgOutIn.RSRPavIn = itemi[k].RSRPav
-			avgOutIn.RSRPmaxOut = itemo[k].RSRPmax
-			avgOutIn.RSRPmaxIn = itemi[k].RSRPmax
-			avgOutIn.RSRPminOut = itemo[k].RSRPmin
-			avgOutIn.RSRPminIn = itemi[k].RSRPmin
-			avgOutIn.RSRPStandardDeviationOut = itemo[k].RSRPStandardDeviation
-			avgOutIn.RSRPStandardDeviationIn = itemi[k].RSRPStandardDeviation
-			avgOutIn.DeltaRSRP = -itemo[k].RSRPav + itemi[k].RSRPav
-			avgOutIn.DeltaRSRQ = -itemo[k].RSRQav + itemi[k].RSRQav
-			avgOutIn.Number = min(itemo[k].Number, itemi[k].Number)
-			res.Data = append(res.Data, avgOutIn)
-		case a && !b:
-			avgOutIn.Keys = k
-			avgOutIn.RSRPavOut = itemo[k].RSRPav
-			avgOutIn.RSRPmaxOut = itemo[k].RSRPmax
-			avgOutIn.RSRPminOut = itemo[k].RSRPmin
-			avgOutIn.RSRPStandardDeviationOut = itemo[k].RSRPStandardDeviation
-			avgOutIn.Number = itemo[k].Number
-			rejo.Data = append(rejo.Data, avgOutIn)
-		case !a && b:
-			avgOutIn.Keys = k
-			avgOutIn.RSRPavIn = itemi[k].RSRPav
-			avgOutIn.RSRPmaxIn = itemi[k].RSRPmax
-			avgOutIn.RSRPminIn = itemi[k].RSRPmin
-			avgOutIn.RSRPStandardDeviationIn = itemi[k].RSRPStandardDeviation
-			avgOutIn.Number = itemi[k].Number
-			reji.Data = append(reji.Data, avgOutIn)
-		}
-	}
-	return res, rejo, reji
 }

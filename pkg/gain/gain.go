@@ -12,229 +12,88 @@ package gain
 
 import (
 	"fmt"
-	"github.com/jedib0t/go-pretty/v6/table"
 	"github.com/lichensio/slichens/pkg/slichens"
-	"math"
-	"os"
 	"time"
 )
 
-func Gain(fileOut, fileIn string, allStat, freq, sample bool) {
+func Gain(fileOut, fileIn string, allStat, freq, sample, level bool) {
 	if fileOut == "" || fileIn == "" {
 		fmt.Println("Please provide an indoor and an indoor with films  siretta survey file name , L____.CSV")
 	} else {
 
 		currentTime := time.Now()
 		// sorting prep
-		netname := func(c1, c2 *slichens.SurveyData) bool {
-			return c1.Keys.NetName < c2.Keys.NetName
+		netname := func(c1, c2 *slichens.SurveyKey) bool {
+			return c1.NetName < c2.NetName
 		}
 
-		cellid := func(c1, c2 *slichens.SurveyData) bool {
-			return c1.Keys.CellID < c2.Keys.CellID
+		cellid := func(c1, c2 *slichens.SurveyKey) bool {
+			return c1.CellID < c2.CellID
 		}
 
-		band := func(c1, c2 *slichens.SurveyData) bool {
-			return c1.Keys.Band < c2.Keys.Band
-		}
-		netnameSAOI := func(c1, c2 *slichens.SurveyAvgOutIn) bool {
-			return c1.Keys.NetName < c2.Keys.NetName
+		band := func(c1, c2 *slichens.SurveyKey) bool {
+			return c1.Band < c2.Band
 		}
 
-		cellidSAOI := func(c1, c2 *slichens.SurveyAvgOutIn) bool {
-			return c1.Keys.CellID < c2.Keys.CellID
+		surveyOut, _ := slichens.ReadMultiCSV(fileOut)
+		surveyIn, _ := slichens.ReadMultiCSV(fileIn)
+
+		surveyso := surveyOut.Surveys
+		surveysi := surveyIn.Surveys
+
+		if sample {
+			surveyso = slichens.SurveySampleRemove(surveyso, 2)
+			surveysi = slichens.SurveySampleRemove(surveysi, 2)
 		}
 
-		bandSAOI := func(c1, c2 *slichens.SurveyAvgOutIn) bool {
-			return c1.Keys.Band < c2.Keys.Band
-		}
-
-		survey_out, _ := slichens.ReadMultiCSV(fileOut)
-		survey_in, _ := slichens.ReadMultiCSV(fileIn)
-
-		surveyso := survey_out.Surveys
-		surveysi := survey_in.Surveys
+		keyso := slichens.KeysSurvey(surveyso)
+		keysi := slichens.KeysSurvey(surveysi)
 
 		if freq {
-			slichens.OrderedBy(band, cellid, netname).Sort(surveyso)
-			slichens.OrderedBy(band, cellid, netname).Sort(surveysi)
+			slichens.OrderedBy(band, cellid, netname).Sort(keyso)
+			slichens.OrderedBy(band, cellid, netname).Sort(keysi)
 		} else {
-			slichens.OrderedBy(netname, band, cellid).Sort(surveyso)
-			slichens.OrderedBy(netname, band, cellid).Sort(surveysi)
+			slichens.OrderedBy(netname, band, cellid).Sort(keyso)
+			slichens.OrderedBy(netname, band, cellid).Sort(keysi)
 		}
 
-		summary_out := slichens.SurveyAverage(surveyso)
-		summary_in := slichens.SurveyAverage(surveysi)
+		summaryOut := slichens.SurveyStatGen(surveyOut)
+		summaryIn := slichens.SurveyStatGen(surveyIn)
 
 		key := &slichens.SurveyKey{
 			Band:    0,
 			CellID:  0,
 			NetName: "",
 		}
-		if sample {
-			summary_out.Avg = slichens.SampleRemove(summary_out.Avg, 2)
-			summary_in.Avg = slichens.SampleRemove(summary_in.Avg, 2)
+		if level {
+			summaryOut.Stat = slichens.StatRemove(summaryOut.Stat, -139.99)
+			summaryIn.Stat = slichens.StatRemove(summaryIn.Stat, -139.99)
 		}
-		summary_out.Avg = slichens.Select(summary_out.Avg, *key)
-		summary_in.Avg = slichens.Select(summary_in.Avg, *key)
 
-		// table formatting
-		ts := table.NewWriter()
-		ts.SetTitle("Initial Indoor Survey: " + summary_out.SurveyType)
-		ts.SetAutoIndex(true)
-		if !allStat {
-			ts.SetOutputMirror(os.Stdout)
-			ts.AppendHeader(table.Row{"MNO", "BAND", "CellID", "RSRP Avg", "RSRQ Avg"})
-			for _, item := range summary_out.Avg {
-				ts.AppendRows([]table.Row{
-					{item.Keys.NetName, item.Keys.Band, item.Keys.CellID,
-						math.Floor(item.RSRPav*100) / 100, math.Floor(item.RSRQav*100) / 100},
-				})
-			}
-		} else {
+		summaryOut.Stat = slichens.Select(summaryOut.Stat, *key)
+		summaryIn.Stat = slichens.Select(summaryIn.Stat, *key)
 
-			ts.SetOutputMirror(os.Stdout)
-			ts.AppendHeader(table.Row{"MNO", "BAND", "CellID", "#", "RSRP min", "RSRP Avg", "RSRP max", "RSRP SD", "RSRQ Avg"})
-			for _, item := range summary_out.Avg {
-				ts.AppendRows([]table.Row{
-					{item.Keys.NetName, item.Keys.Band, item.Keys.CellID, item.Number,
-						math.Floor(item.RSRPmin*100) / 100, math.Floor(item.RSRPav*100) / 100, math.Floor(item.RSRPmax*100) / 100, math.Floor(item.RSRPStandardDeviation*100) / 100, math.Floor(item.RSRQav*100) / 100},
-				})
-			}
-		}
-		ts.Render()
-		// ts.RenderCSV()
+		slichens.SurveyConsolePrint("Indoor 1", currentTime, allStat, keyso, summaryOut)
 
-		ts.ResetRows()
+		slichens.SurveyConsolePrint("Indoor 2", currentTime, allStat, keysi, summaryIn)
 
-		tsin := ts //table.NewWriter()
-		tsin.SetAutoIndex(true)
-		tsin.SetTitle("Improved Indoor Survey: " + summary_in.SurveyType)
-		if !allStat {
-			tsin.SetOutputMirror(os.Stdout)
-			// tsin.AppendHeader(table.Row{"MNO", "BAND", "CellID", "RSRP Avg", "RSRQ Avg"})
-			for _, item := range summary_in.Avg {
-				tsin.AppendRows([]table.Row{
-					{item.Keys.NetName, item.Keys.Band, item.Keys.CellID,
-						math.Floor(item.RSRPav*100) / 100, math.Floor(item.RSRQav*100) / 100},
-				})
-			}
-		} else {
-
-			tsin.SetOutputMirror(os.Stdout)
-			// tsin.AppendHeader(table.Row{"MNO", "BAND", "CellID", "#", "RSRP min", "RSRP Avg", "RSRP max", "RSRP SD", "RSRQ Avg"})
-			for _, item := range summary_in.Avg {
-				tsin.AppendRows([]table.Row{
-					{item.Keys.NetName, item.Keys.Band, item.Keys.CellID, item.Number,
-						math.Floor(item.RSRPmin*100) / 100, math.Floor(item.RSRPav*100) / 100, math.Floor(item.RSRPmax*100) / 100, math.Floor(item.RSRPStandardDeviation*100) / 100, math.Floor(item.RSRQav*100) / 100},
-				})
-			}
-		}
-		tsin.Render()
-		// tsin.RenderCSV()
-
-		merge, rejectiono, rejectioni := slichens.SurveyMergeOutIn2(summary_out.Avg, summary_in.Avg)
+		merge, rejectiono, rejectioni := slichens.SurveyTwoSamplesMerge(summaryOut, summaryIn)
+		keysmerge := slichens.GetKeys(merge.Data)
+		keysrejectiono := slichens.GetKeys(rejectiono.Data)
+		keysrejectioni := slichens.GetKeys(rejectioni.Data)
 
 		if freq {
-			slichens.OrderedBySAOI(bandSAOI, netnameSAOI, cellidSAOI).SortSAOI(merge.Data)
-			slichens.OrderedBySAOI(bandSAOI, netnameSAOI, cellidSAOI).SortSAOI(rejectioni.Data)
-			slichens.OrderedBySAOI(bandSAOI, netnameSAOI, cellidSAOI).SortSAOI(rejectiono.Data)
+			slichens.OrderedBy(band, cellid, netname).Sort(keysmerge)
+			slichens.OrderedBy(band, cellid, netname).Sort(keysrejectiono)
+			slichens.OrderedBy(band, cellid, netname).Sort(keysrejectioni)
 		} else {
-			slichens.OrderedBySAOI(netnameSAOI, bandSAOI, cellidSAOI).SortSAOI(merge.Data)
-			slichens.OrderedBySAOI(netnameSAOI, bandSAOI, cellidSAOI).SortSAOI(rejectioni.Data)
-			slichens.OrderedBySAOI(bandSAOI, netnameSAOI, cellidSAOI).SortSAOI(rejectiono.Data)
+			slichens.OrderedBy(netname, band, cellid).Sort(keysmerge)
+			slichens.OrderedBy(netname, band, cellid).Sort(keysrejectiono)
+			slichens.OrderedBy(netname, band, cellid).Sort(keysrejectioni)
 		}
-		ts.ResetRows()
-		tsm := table.NewWriter()
-		tsm.SetAutoIndex(true)
-		tsm.SetTitle("Indoor \n intial/Improved Survey : " + summary_in.SurveyType)
-		tsm.SetOutputMirror(os.Stdout)
-		if !allStat {
-			tsm.AppendHeader(table.Row{"MNO", "BAND", "CellID", "Indoor RSRP Avg", "Improved RSRP Avg", "Delta RSRP"})
-			for _, item := range merge.Data {
-				tsm.AppendRows([]table.Row{
-					{item.Keys.NetName, item.Keys.Band, item.Keys.CellID,
-						math.Floor(item.RSRPavOut*100) / 100, math.Floor(item.RSRPavIn*100) / 100, math.Floor(item.DeltaRSRP*100) / 100},
-				})
-			}
-		} else {
-			tsm.AppendHeader(table.Row{"MNO", "BAND", "CellID", "# Min", "Delta Indoor/Improved", "Indoor RSRP min", "Indoor RSRP Avg", "Indoor RSRP max", "Indoor RSRP SD", "Improved RSRP min", "Improved RSRP Avg", "Improved RSRP max", "Improved RSRP SD"})
-			for _, item := range merge.Data {
-				tsm.AppendRows([]table.Row{
-					{item.Keys.NetName, item.Keys.Band, item.Keys.CellID, item.Number, math.Floor(item.DeltaRSRP*100) / 100,
-						math.Floor(item.RSRPminOut*100) / 100, math.Floor(item.RSRPavOut*100) / 100, math.Floor(item.RSRPmaxOut*100) / 100, math.Floor(item.RSRPStandardDeviationOut*100) / 100, math.Floor(item.RSRPminIn*100) / 100, math.Floor(item.RSRPavIn*100) / 100, math.Floor(item.RSRPmaxIn*100) / 100, math.Floor(item.RSRPStandardDeviationIn*100) / 100},
-				})
-			}
-		}
-		tsm.Render()
-		// tsm.RenderCSV()
 
-		// rejection 1
-		tej := table.NewWriter()
-		tej.ResetRows()
-		tej.SetAutoIndex(true)
-		tej.SetAllowedRowLength(100)
-		tej.SetTitle("Indoor \n initial/Indoor improved Survey : " + summary_in.SurveyType + "\n Rejection 1")
-		tej.SetOutputMirror(os.Stdout)
-		if !allStat {
-			tej.AppendHeader(table.Row{"MNO", "BAND", "CellID"})
-			for _, item := range rejectiono.Data {
-				tej.AppendRows([]table.Row{
-					{item.Keys.NetName, item.Keys.Band, item.Keys.CellID},
-				})
-			}
-		} else {
-			tej.AppendHeader(table.Row{"MNO", "BAND", "CellID", "# Min", "Indoor RSRP Avg"})
-			for _, item := range rejectiono.Data {
-				tej.AppendRows([]table.Row{
-					{item.Keys.NetName, item.Keys.Band, item.Keys.CellID, item.Number, math.Floor(item.RSRPavOut*100) / 100},
-				})
-			}
-		}
-		tej.Render()
-		r1, rer1 := os.Create("RJ1-" + currentTime.Format("010220061504") + ".csv")
-		slichens.Check(rer1)
-		defer r1.Close()
-		tej.SetOutputMirror(r1)
-		tej.RenderCSV()
-		// tej.RenderCSV()
-		// rejection 2
-		teji := tej //table.NewWriter()
-		teji.ResetRows()
-		teji.SetAutoIndex(true)
-		teji.SetAllowedRowLength(100)
-		teji.SetTitle("Indoor \n initial/improved Survey : " + summary_in.SurveyType + "\n Rejection 2")
-		if !allStat {
-			teji.SetOutputMirror(os.Stdout)
-			// teji.AppendHeader(table.Row{"MNO", "BAND", "CellID"})
-			for _, item := range rejectioni.Data {
-				teji.AppendRows([]table.Row{
-					{item.Keys.NetName, item.Keys.Band, item.Keys.CellID},
-				})
-			}
-		} else {
-
-			teji.SetOutputMirror(os.Stdout)
-			// teji.AppendHeader(table.Row{"MNO", "BAND", "CellID"})
-			for _, item := range rejectioni.Data {
-				teji.AppendRows([]table.Row{
-					{item.Keys.NetName, item.Keys.Band, item.Keys.CellID, item.Number, math.Floor(item.RSRPavIn*100) / 100},
-				})
-			}
-		}
-		teji.Render()
-		r2, rer2 := os.Create("RJ2-" + currentTime.Format("010220061504") + ".csv")
-		slichens.Check(rer2)
-		defer r2.Close()
-		tej.SetOutputMirror(r2)
-		tej.RenderCSV()
-		// teji.RenderCSV()
-
-		f, err := os.Create("GA" + currentTime.Format("010220061504") + ".csv")
-		slichens.Check(err)
-		defer f.Close()
-		tsm.SetOutputMirror(f)
-		tsm.RenderCSV()
-
+		slichens.TwoSampleConsoleIntersectPrint("Gain Survey: ", currentTime, allStat, keysmerge, merge)
+		slichens.TwoSampleConsoleExcluPrint("Gain Survey \n Exclusion 1 \n", currentTime, allStat, keysrejectiono, rejectiono)
+		slichens.TwoSampleConsoleExcluPrint("Gain Survey \n Exclusion 2 \n", currentTime, allStat, keysrejectioni, rejectioni)
 	}
 }

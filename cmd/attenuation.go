@@ -15,6 +15,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var level bool
+
 // attenuationCmd represents the attenuation command
 var attenuationCmd = &cobra.Command{
 	Use:   "attenuation",
@@ -24,7 +26,7 @@ var attenuationCmd = &cobra.Command{
 		out, _ := cmd.Flags().GetString("outfile")
 		in, _ := cmd.Flags().GetString("infile")
 		if out != "" && in != "" {
-			attenuation.Attenuation(out, in, Verbose, Freq, Sample)
+			attenuation.Attenuation(out, in, Verbose, Freq, Sample, level)
 		} else {
 			fmt.Println("survey files name requiered")
 		}
@@ -44,6 +46,7 @@ func init() {
 	attenuationCmd.PersistentFlags().BoolVarP(&Verbose, "verbose", "v", false, "verbose statistic output")
 	attenuationCmd.PersistentFlags().BoolVarP(&Freq, "band", "b", false, "Sorted by frequency band")
 	attenuationCmd.PersistentFlags().BoolVarP(&Sample, "exclude", "s", false, "Remove CellID having less than 3 samples")
+	attenuationCmd.PersistentFlags().BoolVarP(&level, "level", "l", false, "Remove stat having power signal less than 139 db")
 	// Cobra supports local flags which will only run when this command
 	// is called directly, e.g.:
 	// attenuationCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")

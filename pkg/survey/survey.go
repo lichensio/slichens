@@ -13,10 +13,7 @@ package survey
 import (
 	_ "encoding/csv"
 	"fmt"
-	"github.com/jedib0t/go-pretty/v6/table"
 	"github.com/lichensio/slichens/pkg/slichens"
-	"math"
-	"os"
 	"time"
 )
 
@@ -26,16 +23,16 @@ func Survey(filename string, allStat, freq, sample bool) {
 	} else {
 
 		// sorting prep
-		netname := func(c1, c2 *slichens.SurveyData) bool {
-			return c1.Keys.NetName < c2.Keys.NetName
+		netname := func(c1, c2 *slichens.SurveyKey) bool {
+			return c1.NetName < c2.NetName
 		}
 
-		cellid := func(c1, c2 *slichens.SurveyData) bool {
-			return c1.Keys.CellID < c2.Keys.CellID
+		cellid := func(c1, c2 *slichens.SurveyKey) bool {
+			return c1.CellID < c2.CellID
 		}
 
-		band := func(c1, c2 *slichens.SurveyData) bool {
-			return c1.Keys.Band < c2.Keys.Band
+		band := func(c1, c2 *slichens.SurveyKey) bool {
+			return c1.Band < c2.Band
 		}
 
 		// flags
@@ -44,52 +41,29 @@ func Survey(filename string, allStat, freq, sample bool) {
 
 		surveys := survey.Surveys
 
-		if freq {
-			slichens.OrderedBy(band, netname, cellid).Sort(surveys)
-		} else {
-			slichens.OrderedBy(netname, band, cellid).Sort(surveys)
+		if sample {
+			surveys = slichens.SurveySampleRemove(surveys, 2)
 		}
 
-		summary := slichens.SurveyAverage(surveys)
+		keys := slichens.KeysSurvey(surveys)
+
+		if freq {
+			slichens.OrderedBy(band, netname, cellid).Sort(keys)
+		} else {
+			slichens.OrderedBy(netname, band, cellid).Sort(keys)
+		}
+
+		summary := slichens.SurveyStatGen(survey)
 
 		key := &slichens.SurveyKey{
 			Band:    0,
 			CellID:  0,
 			NetName: "",
 		}
-		if sample {
-			summary.Avg = slichens.SampleRemove(summary.Avg, 2)
-		}
-		summary.Avg = slichens.Select(summary.Avg, *key)
-		ts := table.NewWriter()
 
-		if !allStat {
-			ts.SetOutputMirror(os.Stdout)
-			ts.AppendHeader(table.Row{"MNO", "BAND", "CellID", "RSRP Avg", "RSRQ Avg"})
-			for _, item := range summary.Avg {
-				ts.AppendRows([]table.Row{
-					{item.Keys.NetName, item.Keys.Band, item.Keys.CellID,
-						math.Floor(item.RSRPav*100) / 100, math.Floor(item.RSRQav*100) / 100},
-				})
-			}
-		} else {
-
-			ts.SetOutputMirror(os.Stdout)
-			ts.AppendHeader(table.Row{"MNO", "BAND", "CellID", "#", "RSRP min", "RSRP Avg", "RSRP max", "RSRP SD", "RSRQ Avg"})
-			for _, item := range summary.Avg {
-				ts.AppendRows([]table.Row{
-					{item.Keys.NetName, item.Keys.Band, item.Keys.CellID, item.Number,
-						math.Floor(item.RSRPmin*100) / 100, math.Floor(item.RSRPav*100) / 100, math.Floor(item.RSRPmax*100) / 100, math.Floor(item.RSRPStandardDeviation*100) / 100, math.Floor(item.RSRQav*100) / 100},
-				})
-			}
-		}
-		ts.Render()
+		summary.Stat = slichens.Select(summary.Stat, *key)
 		currentTime := time.Now()
 
-		f, err := os.Create("SR" + currentTime.Format("010220061504") + ".csv")
-		slichens.Check(err)
-		defer f.Close()
-		ts.SetOutputMirror(f)
-		ts.RenderCSV()
+		slichens.SurveyConsolePrint("Survey", currentTime, allStat, keys, summary)
 	}
 }

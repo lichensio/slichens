@@ -25,7 +25,7 @@ var gainCmd = &cobra.Command{
 		out, _ := cmd.Flags().GetString("indoor")
 		in, _ := cmd.Flags().GetString("mbooster")
 		if out != "" && in != "" {
-			gain.Gain(out, in, Verbose, Freq, Sample)
+			gain.Gain(out, in, Verbose, Freq, level, Sample)
 		} else {
 			fmt.Println("survey files name requiered")
 		}
@@ -45,6 +45,7 @@ func init() {
 	gainCmd.PersistentFlags().BoolVarP(&Verbose, "verbose", "v", false, "verbose statistic output")
 	gainCmd.PersistentFlags().BoolVarP(&Freq, "band", "b", false, "Sorted by frequency band")
 	gainCmd.PersistentFlags().BoolVarP(&Sample, "exclude", "s", false, "Remove CellID having less than 3 samples")
+	gainCmd.PersistentFlags().BoolVarP(&level, "level", "l", false, "Remove stat having power signal less than 139 db")
 	// Cobra supports local flags which will only run when this command
 	// is called directly, e.g.:
 	// gainCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
