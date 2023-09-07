@@ -25,9 +25,9 @@ var gainCmd = &cobra.Command{
 		out, _ := cmd.Flags().GetString("indoor")
 		in, _ := cmd.Flags().GetString("mbooster")
 		if out != "" && in != "" {
-			gain.Gain(out, in, Verbose, Freq, level, Sample)
+			gain.Gain(out, in, Verbose, Freq, Sample, level)
 		} else {
-			fmt.Println("survey files name requiered")
+			fmt.Println("survey files name required")
 		}
 	},
 }

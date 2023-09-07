@@ -1,3 +1,10 @@
+package survey
+
+import (
+	"fmt"
+	"github.com/lichensio/slichens/pkg/slichens"
+)
+
 /*
  * Copyright © 2023 LICHENS http://www.lichens.io
  *
@@ -8,62 +15,38 @@
  * THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-package survey
-
-import (
-	_ "encoding/csv"
-	"fmt"
-	"github.com/lichensio/slichens/pkg/slichens"
-	"time"
-)
-
-func Survey(filename string, allStat, freq, sample bool) {
+func ProcessSurvey(filename string, allStat, freq, sample bool) (slichens.KeySlice, slichens.SurveySummary, error) {
 	if filename == "" {
 		fmt.Println("Please provide a siretta survey file name, L____.CSV")
-	} else {
-
-		// sorting prep
-		netname := func(c1, c2 *slichens.SurveyKey) bool {
-			return c1.NetName < c2.NetName
-		}
-
-		cellid := func(c1, c2 *slichens.SurveyKey) bool {
-			return c1.CellID < c2.CellID
-		}
-
-		band := func(c1, c2 *slichens.SurveyKey) bool {
-			return c1.Band < c2.Band
-		}
-
-		// flags
-
-		survey, _ := slichens.ReadMultiCSV(filename)
-
-		surveys := survey.Surveys
-
-		if sample {
-			surveys = slichens.SurveySampleRemove(surveys, 2)
-		}
-
-		keys := slichens.KeysSurvey(surveys)
-
-		if freq {
-			slichens.OrderedBy(band, netname, cellid).Sort(keys)
-		} else {
-			slichens.OrderedBy(netname, band, cellid).Sort(keys)
-		}
-
-		summary := slichens.SurveyStatGen(survey)
-
-		key := &slichens.SurveyKey{
-			Band:    0,
-			CellID:  0,
-			NetName: "",
-		}
-
-		summary.Stat = slichens.Select(summary.Stat, *key)
-		currentTime := time.Now()
-
-		slichens.SurveyConsolePrint("Survey", currentTime, allStat, keys, summary)
+		return nil, slichens.SurveySummary{}, fmt.Errorf("Please provide a siretta survey file name, L____.CSV")
 	}
+
+	// Get the survey data from the file
+	survey, err := slichens.ReadMultiCSV(filename)
+	if err != nil {
+		fmt.Println("Error reading CSV:", err)
+		return nil, slichens.SurveySummary{}, fmt.Errorf("Error reading CSV:", err)
+	}
+
+	surveys := survey.Surveys
+	if sample {
+		surveys = slichens.SurveySampleRemove(surveys, slichens.MinimumSampleCount) // Removed magic number, used '2' directly here as specified in your original code
+	}
+
+	keys := slichens.KeysSurvey(surveys)
+	sortFunc := slichens.GetSortFunctions(freq)
+	sorter := slichens.NewMultiSorter(sortFunc...)
+	sorter.Sort(keys)
+
+	summary := slichens.SurveyStatGen(survey)
+	key := &slichens.SurveyKey{
+		Band:    0,
+		CellID:  0,
+		NetName: "",
+	}
+	summary.Stat = slichens.Select(summary.Stat, *key)
+
+	// currentTime := time.Now()
+	// SurveyConsolePrint("Survey", currentTime, allStat, freq, keys, summary)
+	return keys, summary, nil
 }

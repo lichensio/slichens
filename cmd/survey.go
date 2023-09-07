@@ -11,8 +11,10 @@ package cmd
 
 import (
 	"fmt"
+	"github.com/lichensio/slichens/pkg/slichens"
 	"github.com/lichensio/slichens/pkg/survey"
 	"github.com/spf13/cobra"
+	"time"
 )
 
 var Verbose bool
@@ -27,7 +29,10 @@ var surveyCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		filename, _ := cmd.Flags().GetString("filename")
 		if filename != "" {
-			survey.Survey(filename, Verbose, Freq, Sample)
+			fmt.Println(filename, Verbose, Freq, Sample)
+			keysOut, summaryOut, _ := survey.ProcessSurvey(filename, Verbose, Freq, Sample)
+			currentTime := time.Now()
+			slichens.SurveyConsolePrint("Survey", currentTime, Verbose, Freq, keysOut, summaryOut)
 		} else {
 			fmt.Println("survey file name requiered")
 		}
