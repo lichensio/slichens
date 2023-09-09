@@ -12,6 +12,7 @@ func SurveyStatGen(data SurveyResult) SurveySummary {
 	var result SurveySummary
 	result.Stat = make(map[SurveyKey]SurveyStat)
 	result.SurveyType = data.SurveyType
+	result.Filename = data.Filename
 	for key, slice := range data.Surveys {
 		var data []float64
 		var statsurvey SurveyStat
@@ -122,6 +123,12 @@ func SurveyTwoSamplesMerge(out, in SurveySummary) (SurveyTwoSamplesSummary, Surv
 	onlyOut.Data = make(map[SurveyKey]SurveyTwoSamples)
 	onlyIn.Data = make(map[SurveyKey]SurveyTwoSamples)
 	mergedData.SurveyType = out.SurveyType
+	mergedData.Filename1 = out.Filename
+	mergedData.Filename2 = in.Filename
+	onlyOut.Filename1 = out.Filename
+	onlyOut.Filename2 = in.Filename
+	onlyIn.Filename1 = out.Filename
+	onlyIn.Filename2 = in.Filename
 
 	var avgOutIn SurveyTwoSamples
 
@@ -136,11 +143,13 @@ func SurveyTwoSamplesMerge(out, in SurveySummary) (SurveyTwoSamplesSummary, Surv
 			avgOutIn.RSRPminIn = itemi.RSRPMin
 			avgOutIn.RSRPStandardDeviationOut = itemo.RSRPStandardDeviation
 			avgOutIn.RSRPStandardDeviationIn = itemi.RSRPStandardDeviation
-			avgOutIn.DeltaRSRP = -itemo.RSRPMean + itemi.RSRPMean
-			avgOutIn.Number = min(itemo.Number, itemi.Number)
+			avgOutIn.DeltaRSRP = itemi.RSRPMean - itemo.RSRPMean
 
-			s2no := avgOutIn.RSRPStandardDeviationOut * avgOutIn.RSRPStandardDeviationOut / float64(itemo.Number)
-			s2ni := avgOutIn.RSRPStandardDeviationIn * avgOutIn.RSRPStandardDeviationIn / float64(itemi.Number)
+			avgOutIn.Number2 = itemi.Number
+			avgOutIn.Number1 = itemo.Number
+
+			s2no := (avgOutIn.RSRPStandardDeviationOut * avgOutIn.RSRPStandardDeviationOut) / float64(itemo.Number)
+			s2ni := (avgOutIn.RSRPStandardDeviationIn * avgOutIn.RSRPStandardDeviationIn) / float64(itemi.Number)
 			avgOutIn.T = (avgOutIn.RSRPavOut - avgOutIn.RSRPavIn) / math.Sqrt(s2no+s2ni)
 			dfnum := math.Pow(s2no+s2ni, 2.0)
 			dfDen := math.Pow(s2no, 2.0)/(float64(itemo.Number)-1.0) + math.Pow(s2ni, 2.0)/(float64(itemi.Number)-1.0)
@@ -149,7 +158,8 @@ func SurveyTwoSamplesMerge(out, in SurveySummary) (SurveyTwoSamplesSummary, Surv
 			mergedData.Data[keyo] = avgOutIn
 		} else {
 			avgOutIn.RSRPavOut = itemo.RSRPMean
-			avgOutIn.Number = itemo.Number
+			avgOutIn.Number1 = itemo.Number
+			avgOutIn.Number2 = 0
 			onlyOut.Data[keyo] = avgOutIn
 		}
 	}
@@ -157,7 +167,8 @@ func SurveyTwoSamplesMerge(out, in SurveySummary) (SurveyTwoSamplesSummary, Surv
 	for keyi, itemi := range in.Stat {
 		if _, ok := out.Stat[keyi]; !ok { // If keyi is not present in out.Stat
 			avgOutIn.RSRPavOut = itemi.RSRPMean
-			avgOutIn.Number = itemi.Number
+			avgOutIn.Number1 = 0
+			avgOutIn.Number2 = itemi.Number
 			onlyIn.Data[keyi] = avgOutIn
 		}
 	}
@@ -175,4 +186,11 @@ func GetKeys[K SurveyKey, V any](m map[K]V) []K {
 
 func Max(x, y float64) float64 {
 	return math.Max(x, y)
+}
+
+func maxUint(a, b uint) uint {
+	if a > b {
+		return a
+	}
+	return b
 }

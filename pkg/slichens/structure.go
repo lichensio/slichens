@@ -9,6 +9,7 @@ type SurveyKey struct {
 	Band    int    // 0 all
 	CellID  int    // 0 all
 	NetName string // all all
+	Type    string
 }
 
 // Front structure and information about the survey
@@ -80,11 +81,13 @@ type SurveyStatMap map[SurveyKey]SurveyStat
 
 type SurveySummary struct {
 	SurveyType string
+	Filename   string
 	Stat       SurveyStatMap
 }
 
 type SurveyTwoSamples struct {
-	Number                   uint
+	Number1                  uint
+	Number2                  uint
 	RSRPavOut                float64
 	RSRQavOut                float64
 	RSRPmaxOut               float64
@@ -109,6 +112,7 @@ type SurveyTwoSamples struct {
 type SurveyTwoSamplesMap map[SurveyKey]SurveyTwoSamples
 
 type SurveyTwoSamplesSummary struct {
-	SurveyType string
-	Data       SurveyTwoSamplesMap
+	SurveyType           string
+	Filename1, Filename2 string
+	Data                 SurveyTwoSamplesMap
 }

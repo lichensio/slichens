@@ -12,7 +12,7 @@ import (
 func SurveyConsolePrint(title string, currentTime time.Time, all bool, freq bool, sortedKeys []SurveyKey, surveySummary SurveySummary) {
 
 	tableWriter := table.NewWriter()
-	tableWriter.SetTitle(title + surveySummary.SurveyType)
+	tableWriter.SetTitle(title + surveySummary.SurveyType + " " + surveySummary.Filename)
 	tableWriter.SetAutoIndex(true)
 	tableWriter.SetOutputMirror(os.Stdout)
 
@@ -66,6 +66,17 @@ func SurveyConsolePrint(title string, currentTime time.Time, all bool, freq bool
 		}
 	}
 	tableWriter.Render()
+
+	// Create a CSV file and render the table in CSV format
+	fileName := "S" + currentTime.Format("010220061504") + ".csv"
+	f, err := os.Create(fileName)
+	if err != nil {
+		log.Fatalf("Failed to create file %s: %v", fileName, err)
+	}
+	defer f.Close()
+
+	tableWriter.SetOutputMirror(f)
+	tableWriter.RenderCSV()
 }
 
 // Helper function to generate table header
@@ -78,15 +89,15 @@ func GetTwoSampleHeader(all bool, title1, title2 string, freq bool) table.Row {
 	}
 
 	if freq {
-		return table.Row{"BAND", "MNO", "CellID", "#", "Delta " + title1 + "/" + title2, title1 + " RSRP min", title1 + " RSRP Avg", title1 + " RSRP max", title1 + " RSRP SD", title2 + " RSRP min", title2 + " RSRP Avg", title2 + " RSRP max", title2 + " RSRP SD", "t", "p"}
+		return table.Row{"BAND", "MNO", "CellID", "#1", "#2", "Delta " + title1 + "/" + title2, title1 + " RSRP min", title1 + " RSRP Avg", title1 + " RSRP max", title1 + " RSRP SD", title2 + " RSRP min", title2 + " RSRP Avg", title2 + " RSRP max", title2 + " RSRP SD", "t", "p"}
 	}
-	return table.Row{"MNO", "BAND", "CellID", "#", "Delta " + title1 + "/" + title2, title1 + " RSRP min", title1 + " RSRP Avg", title1 + " RSRP max", title1 + " RSRP SD", title2 + " RSRP min", title2 + " RSRP Avg", title2 + " RSRP max", title2 + " RSRP SD", "t", "p"}
+	return table.Row{"MNO", "BAND", "CellID", "#1", "#2", "Delta " + title1 + "/" + title2, title1 + " RSRP min", title1 + " RSRP Avg", title1 + " RSRP max", title1 + " RSRP SD", title2 + " RSRP min", title2 + " RSRP Avg", title2 + " RSRP max", title2 + " RSRP SD", "t", "p"}
 }
 
 func TwoSampleConsoleIntersectPrint(flag bool, title string, currentTime time.Time, all bool, freq bool, sortedKeys []SurveyKey, surveyStatSummary SurveyTwoSamplesSummary) {
 	tsm := table.NewWriter()
 	tsm.SetAutoIndex(true)
-	tsm.SetTitle(title + surveyStatSummary.SurveyType)
+	tsm.SetTitle(title + surveyStatSummary.SurveyType + " " + surveyStatSummary.Filename1 + " " + surveyStatSummary.Filename2)
 
 	// Round a float64 value to 2 decimal places
 	roundTo2DP := func(val float64) float64 {
@@ -120,9 +131,9 @@ func TwoSampleConsoleIntersectPrint(flag bool, title string, currentTime time.Ti
 			}
 			tsm.AppendRow(row)
 		} else {
-			row := []interface{}{k.NetName, k.Band, k.CellID, surveyStatSummary.Data[k].Number, math.Floor(surveyStatSummary.Data[k].DeltaRSRP*100) / 100, math.Floor(surveyStatSummary.Data[k].RSRPminOut*100) / 100, math.Floor(surveyStatSummary.Data[k].RSRPavOut*100) / 100, math.Floor(surveyStatSummary.Data[k].RSRPmaxOut*100) / 100, math.Floor(surveyStatSummary.Data[k].RSRPStandardDeviationOut*100) / 100, math.Floor(surveyStatSummary.Data[k].RSRPminIn*100) / 100, math.Floor(surveyStatSummary.Data[k].RSRPavIn*100) / 100, math.Floor(surveyStatSummary.Data[k].RSRPmaxIn*100) / 100, math.Floor(surveyStatSummary.Data[k].RSRPStandardDeviationIn*100) / 100, math.Floor(surveyStatSummary.Data[k].T*100) / 100, math.Floor(surveyStatSummary.Data[k].P*100) / 100}
+			row := []interface{}{k.NetName, k.Band, k.CellID, surveyStatSummary.Data[k].Number1, surveyStatSummary.Data[k].Number2, math.Floor(surveyStatSummary.Data[k].DeltaRSRP*100) / 100, math.Floor(surveyStatSummary.Data[k].RSRPminOut*100) / 100, math.Floor(surveyStatSummary.Data[k].RSRPavOut*100) / 100, math.Floor(surveyStatSummary.Data[k].RSRPmaxOut*100) / 100, math.Floor(surveyStatSummary.Data[k].RSRPStandardDeviationOut*100) / 100, math.Floor(surveyStatSummary.Data[k].RSRPminIn*100) / 100, math.Floor(surveyStatSummary.Data[k].RSRPavIn*100) / 100, math.Floor(surveyStatSummary.Data[k].RSRPmaxIn*100) / 100, math.Floor(surveyStatSummary.Data[k].RSRPStandardDeviationIn*100) / 100, math.Floor(surveyStatSummary.Data[k].T*100) / 100, math.Floor(surveyStatSummary.Data[k].P*100) / 100}
 			if freq {
-				row = []interface{}{k.Band, k.NetName, k.CellID, surveyStatSummary.Data[k].Number, math.Floor(surveyStatSummary.Data[k].DeltaRSRP*100) / 100, math.Floor(surveyStatSummary.Data[k].RSRPminOut*100) / 100, math.Floor(surveyStatSummary.Data[k].RSRPavOut*100) / 100, math.Floor(surveyStatSummary.Data[k].RSRPmaxOut*100) / 100, math.Floor(surveyStatSummary.Data[k].RSRPStandardDeviationOut*100) / 100, math.Floor(surveyStatSummary.Data[k].RSRPminIn*100) / 100, math.Floor(surveyStatSummary.Data[k].RSRPavIn*100) / 100, math.Floor(surveyStatSummary.Data[k].RSRPmaxIn*100) / 100, math.Floor(surveyStatSummary.Data[k].RSRPStandardDeviationIn*100) / 100, math.Floor(surveyStatSummary.Data[k].T*100) / 100, math.Floor(surveyStatSummary.Data[k].P*100) / 100}
+				row = []interface{}{k.Band, k.NetName, k.CellID, surveyStatSummary.Data[k].Number1, surveyStatSummary.Data[k].Number2, math.Floor(surveyStatSummary.Data[k].DeltaRSRP*100) / 100, math.Floor(surveyStatSummary.Data[k].RSRPminOut*100) / 100, math.Floor(surveyStatSummary.Data[k].RSRPavOut*100) / 100, math.Floor(surveyStatSummary.Data[k].RSRPmaxOut*100) / 100, math.Floor(surveyStatSummary.Data[k].RSRPStandardDeviationOut*100) / 100, math.Floor(surveyStatSummary.Data[k].RSRPminIn*100) / 100, math.Floor(surveyStatSummary.Data[k].RSRPavIn*100) / 100, math.Floor(surveyStatSummary.Data[k].RSRPmaxIn*100) / 100, math.Floor(surveyStatSummary.Data[k].RSRPStandardDeviationIn*100) / 100, math.Floor(surveyStatSummary.Data[k].T*100) / 100, math.Floor(surveyStatSummary.Data[k].P*100) / 100}
 			}
 			tsm.AppendRow(row)
 		}
@@ -141,7 +152,7 @@ func TwoSampleConsoleIntersectPrint(flag bool, title string, currentTime time.Ti
 func TwoSampleConsoleExcluPrint(version, title string, currentTime time.Time, all bool, freq bool, sortedKeys []SurveyKey, surveyStatSummary SurveyTwoSamplesSummary) {
 	tableWriter := table.NewWriter()
 	tableWriter.SetAutoIndex(true)
-	tableWriter.SetTitle(title + surveyStatSummary.SurveyType)
+	tableWriter.SetTitle(title + surveyStatSummary.SurveyType + " " + surveyStatSummary.Filename1 + " " + surveyStatSummary.Filename2)
 	tableWriter.SetOutputMirror(os.Stdout)
 
 	// Round a float64 value to 2 decimal places
@@ -170,9 +181,9 @@ func TwoSampleConsoleExcluPrint(version, title string, currentTime time.Time, al
 				headersSet = true
 			}
 			if freq {
-				tableWriter.AppendRow(table.Row{key.Band, key.NetName, key.CellID, roundTo2DP(surveyStatSummary.Data[key].RSRPavOut), surveyStatSummary.Data[key].Number})
+				tableWriter.AppendRow(table.Row{key.Band, key.NetName, key.CellID, roundTo2DP(surveyStatSummary.Data[key].RSRPavOut), maxUint(surveyStatSummary.Data[key].Number1, surveyStatSummary.Data[key].Number2)})
 			} else {
-				tableWriter.AppendRow(table.Row{key.NetName, key.Band, key.CellID, roundTo2DP(surveyStatSummary.Data[key].RSRPavOut), surveyStatSummary.Data[key].Number})
+				tableWriter.AppendRow(table.Row{key.NetName, key.Band, key.CellID, roundTo2DP(surveyStatSummary.Data[key].RSRPavOut), maxUint(surveyStatSummary.Data[key].Number1, surveyStatSummary.Data[key].Number2)})
 			}
 		} else {
 			if !headersSet {

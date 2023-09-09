@@ -66,6 +66,7 @@ func ReadMultiCSV(filename string) (SurveyResult, error) {
 		// Allow for variable columns per row.
 		reader.FieldsPerRecord = 0
 	}
+
 	// fmt.Println(survey)
 	// Parsing survey data
 	for {
