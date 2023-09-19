@@ -7,15 +7,7 @@ import (
 	"math"
 	"os"
 	"sort"
-	"strconv"
 )
-
-func getCurrentGroup(k SurveyKey, freq bool) string {
-	if freq {
-		return strconv.Itoa(k.Band) // Convert int to string
-	}
-	return k.NetName
-}
 
 func TableConsolePrintALL(title string, surveySummary SurveySummary, primarySortColumn string) {
 
@@ -129,34 +121,6 @@ func contains(s []string, e string) bool {
 		}
 	}
 	return false
-}
-
-func getDbmColor(dbm float64) text.Colors {
-	switch {
-	case dbm >= -80:
-		return text.Colors{text.FgGreen}
-	case dbm < -80 && dbm >= -90:
-		return text.Colors{text.FgYellow}
-	case dbm < -90 && dbm >= -100:
-		// If FgOrange is not available, you can use FgMagenta or another color as a placeholder
-		return text.Colors{text.FgMagenta}
-	default:
-		return text.Colors{text.FgRed}
-	}
-}
-
-func getSStrengthsColor(rssi int) text.Colors {
-	switch {
-	case rssi >= 55:
-		return text.Colors{text.FgGreen}
-	case rssi < 55 && rssi >= 25:
-		return text.Colors{text.FgYellow}
-	case rssi < 25 && rssi >= 0:
-		// If FgOrange is not available, you can use FgMagenta or another color as a placeholder
-		return text.Colors{text.FgRed}
-	default:
-		return text.Colors{text.FgRed}
-	}
 }
 
 func getColorCoding(value, min, max int) text.Colors {

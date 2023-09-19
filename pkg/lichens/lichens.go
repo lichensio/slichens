@@ -70,29 +70,6 @@ func SurveyStatGen(data SurveyInfo) SurveySummary {
 	return *result
 }
 
-func KeysSurvey(survey SurveyMap) []SurveyKey {
-	res := make([]SurveyKey, 0, len(survey))
-	for k := range survey {
-		res = append(res, k)
-	}
-	return res
-}
-
-func Check(e error) {
-	if e != nil {
-		panic(e)
-	}
-}
-
-func CompareInts(a, b int) int {
-	if a < b {
-		return -1
-	} else if a > b {
-		return 1
-	}
-	return 0
-}
-
 func GetKeys[K SurveyKey, V any](m map[K]V) []K {
 	keys := make([]K, 0, len(m))
 	for k := range m {
