@@ -3,7 +3,6 @@ package attenuation
 import (
 	"fmt"
 	"github.com/lichensio/slichens/pkg/lichens"
-	"github.com/lichensio/slichens/pkg/statistics"
 	"github.com/lichensio/slichens/pkg/survey"
 )
 
@@ -22,7 +21,7 @@ func GenerateDeltaStats(set1, set2 lichens.SurveySummary, DeltaType lichens.Delt
 	for key, _ := range common {
 		deltaStatsForThisKey, exists := survey.DeltaStats[key]
 		if !exists {
-			deltaStatsForThisKey = make(statistics.SurveyDeltaStats)
+			deltaStatsForThisKey = make(lichens.SurveyDeltaStats)
 		} // get the SurveyDeltaStats value (it's a copy)
 		deltaStatsForThisKey.CalculateDelta(set1.Stat[key], set2.Stat[key]) // modify the copy
 		survey.Set(key, deltaStatsForThisKey)
