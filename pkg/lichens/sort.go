@@ -1,7 +1,7 @@
-package slichens
+package lichens
 
 import (
-	"github.com/lichensio/slichens/pkg/stats"
+	"github.com/lichensio/slichens/pkg/statistics"
 	"sort"
 )
 
@@ -103,7 +103,7 @@ func SurveySampleRemove(data SurveyMap, number int) SurveyMap {
 	return data
 }
 
-func StatRemove(data stats.SurveyStatsMap, level float64) stats.SurveyStatsMap {
+func StatRemove(data statistics.SurveyStatsMap, level float64) statistics.SurveyStatsMap {
 	for key, item := range data {
 		if item["DBM"].Mean <= level {
 			delete(data, key)
@@ -112,9 +112,9 @@ func StatRemove(data stats.SurveyStatsMap, level float64) stats.SurveyStatsMap {
 	return data
 }
 
-func SelectStats(data stats.SurveyStatsMap, filter SurveyKey) stats.SurveyStatsMap {
+func SelectStats(data statistics.SurveyStatsMap, filter SurveyKey) statistics.SurveyStatsMap {
 	// Create a new empty map
-	newData := make(stats.SurveyStatsMap)
+	newData := make(statistics.SurveyStatsMap)
 
 	for k, v := range data {
 		if KeyFilter(k, filter) {

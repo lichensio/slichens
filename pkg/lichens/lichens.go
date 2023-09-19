@@ -1,20 +1,20 @@
-package slichens
+package lichens
 
 import (
-	"github.com/lichensio/slichens/pkg/stats"
+	"github.com/lichensio/slichens/pkg/statistics"
 	"math"
 )
 
 func NewSurveyStatsSummary(surveytype string) *SurveySummary {
 	return &SurveySummary{
 		SurveyType: surveytype,
-		Stat:       make(stats.SurveyStatsMap),
+		Stat:       make(statistics.SurveyStatsMap),
 		Min:        math.MaxFloat64,
 		Max:        -math.MaxFloat64,
 	}
 }
 
-func (fm *SurveySummary) Set(key SurveyKey, value stats.SurveyStats) {
+func (fm *SurveySummary) Set(key SurveyKey, value statistics.SurveyStats) {
 	fm.Stat[key] = value
 	if value["RSSI"].Mean < fm.Min {
 		fm.Min = value["RSSI"].Mean
@@ -34,7 +34,7 @@ func NewSurveyDeltaSummary(surveytype string, deltatype DeltaType) *SurveyDeltaS
 	}
 }
 
-func (fm *SurveyDeltaStatsSummary) Set(key SurveyKey, value stats.SurveyDeltaStats) {
+func (fm *SurveyDeltaStatsSummary) Set(key SurveyKey, value statistics.SurveyDeltaStats) {
 	fm.DeltaStats[key] = value
 	if value["RSSI"].Delta < fm.Min {
 		fm.Min = value["RSSI"].Delta
@@ -50,17 +50,17 @@ func SurveyStatGen(data SurveyInfo) SurveySummary {
 
 	for key, slice := range data.Surveys {
 
-		var stats map[string]stats.Stats
+		var stats map[string]statistics.Stats
 
 		switch key.NetworkType {
 		case "2G":
-			calculator := &TwoGCalculator{}
+			calculator := &statistics.TwoGCalculator{}
 			stats = calculator.Calculate(slice)
 		case "3G":
-			calculator := &ThreeGCalculator{}
+			calculator := &statistics.ThreeGCalculator{}
 			stats = calculator.Calculate(slice)
 		case "4G":
-			calculator := &FourGCalculator{}
+			calculator := &statistics.FourGCalculator{}
 			stats = calculator.Calculate(slice)
 		default:
 			// Handle default or unknown case, maybe log an error or return.

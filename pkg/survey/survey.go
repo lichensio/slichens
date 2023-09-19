@@ -2,7 +2,7 @@ package survey
 
 import (
 	"fmt"
-	"github.com/lichensio/slichens/pkg/slichens"
+	"github.com/lichensio/slichens/pkg/lichens"
 )
 
 /*
@@ -15,32 +15,32 @@ import (
  * THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-func ProcessSurvey(filename string, allStat, freq, sample bool) (slichens.SurveySummary, error) {
+func ProcessSurvey(filename string, allStat, freq, sample bool) (lichens.SurveySummary, error) {
 	if filename == "" {
 		fmt.Println("Please provide a siretta survey file name, L____.CSV")
-		return slichens.SurveySummary{}, fmt.Errorf("Please provide a siretta survey file name, L____.CSV")
+		return lichens.SurveySummary{}, fmt.Errorf("Please provide a siretta survey file name, L____.CSV")
 	}
 
 	// Get the survey data from the file
-	survey, err := slichens.ReadMultiCSV(filename)
+	survey, err := lichens.ReadMultiCSV(filename)
 	if err != nil {
 		fmt.Println("Error reading CSV:", err)
-		return slichens.SurveySummary{}, fmt.Errorf("Error reading CSV:", err)
+		return lichens.SurveySummary{}, fmt.Errorf("Error reading CSV:", err)
 	}
 
 	surveys := survey.Surveys
 
 	if sample {
-		surveys = slichens.SurveySampleRemove(surveys, slichens.MinimumSampleCount) // Removed magic number, used '2' directly here as specified in your original code
+		surveys = lichens.SurveySampleRemove(surveys, lichens.MinimumSampleCount) // Removed magic number, used '2' directly here as specified in your original code
 	}
 
-	summary := slichens.SurveyStatGen(survey)
-	key := &slichens.SurveyKey{
+	summary := lichens.SurveyStatGen(survey)
+	key := &lichens.SurveyKey{
 		Band:    0,
 		CellID:  0,
 		NetName: "",
 	}
-	summary.Stat = slichens.SelectStats(summary.Stat, *key)
+	summary.Stat = lichens.SelectStats(summary.Stat, *key)
 
 	// currentTime := time.Now()
 	// SurveyConsolePrint("Survey", currentTime, allStat, freq, keys, summary)

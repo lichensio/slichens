@@ -21,16 +21,16 @@ var cfgFile string
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
-	Use:   "slichens",
-	Short: "slichens, CLI tool to analyse siretta survey csv files",
-	Long: `slichens a CLI tool to analyse siretta survey csv file. For example:
+	Use:   "lichens",
+	Short: "lichens, CLI tool to analyse siretta survey csv files",
+	Long: `lichens a CLI tool to analyse siretta survey csv file. For example:
 
 Calculate average, min, max and sd of a survey per MNO and per Band.
 Compare outdoor to indoor survey to evaluate indoor attenuation.
 Compare two indoor surveys in order to evaluate possible improvements.`,
 	// Uncomment the following line if your bare application
 	// has an action associated with it:
-	Run: func(cmd *cobra.Command, args []string) { fmt.Println("Hello slichens tool") },
+	Run: func(cmd *cobra.Command, args []string) { fmt.Println("Hello lichens tool") },
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
@@ -48,7 +48,7 @@ func init() {
 	// Cobra supports persistent flags, which, if defined here,
 	// will be global for your application.
 
-	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.slichens.yaml)")
+	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.lichens.yaml)")
 
 	// Cobra also supports local flags, which will only run
 	// when this action is called directly.

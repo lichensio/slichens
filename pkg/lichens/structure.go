@@ -1,7 +1,7 @@
-package slichens
+package lichens
 
 import (
-	"github.com/lichensio/slichens/pkg/stats"
+	"github.com/lichensio/slichens/pkg/statistics"
 	"time"
 )
 
@@ -32,7 +32,7 @@ type SurveyDeltaStatsSummary struct {
 	Max        float64
 }
 
-type SurveyDeltaMap map[SurveyKey]stats.SurveyDeltaStats
+type SurveyDeltaMap map[SurveyKey]statistics.SurveyDeltaStats
 
 type SurveyKey struct {
 	Band        int    // 0 all
@@ -91,7 +91,7 @@ type SurveyData struct {
 
 type SurveySummary struct {
 	SurveyType string
-	Stat       stats.SurveyStatsMap
+	Stat       statistics.SurveyStatsMap
 	Min        float64
 	Max        float64
 }

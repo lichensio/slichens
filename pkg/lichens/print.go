@@ -1,4 +1,4 @@
-package slichens
+package lichens
 
 import (
 	"fmt"

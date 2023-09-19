@@ -2,7 +2,7 @@ package cmd
 
 import (
 	"fmt"
-	"github.com/lichensio/slichens/pkg/slichens"
+	"github.com/lichensio/slichens/pkg/lichens"
 	"github.com/lichensio/slichens/pkg/survey"
 	"github.com/spf13/cobra"
 )
@@ -18,10 +18,10 @@ var surveyCmd = &cobra.Command{
 		if filename != "" {
 			fmt.Println(filename)
 			summaryOut, _ := survey.ProcessSurvey(filename, false, false, false)
-			slichens.TableConsolePrintALL("Survey", summaryOut, primarySortColumn)
-			slichens.TableConsolePrintStats("Survey", false, summaryOut, "2G", primarySortColumn)
-			slichens.TableConsolePrintStats("Survey", false, summaryOut, "3G", primarySortColumn)
-			slichens.TableConsolePrintStats("Survey", false, summaryOut, "4G", primarySortColumn)
+			lichens.TableConsolePrintALL("Survey", summaryOut, primarySortColumn)
+			lichens.TableConsolePrintStats("Survey", false, summaryOut, "2G", primarySortColumn)
+			lichens.TableConsolePrintStats("Survey", false, summaryOut, "3G", primarySortColumn)
+			lichens.TableConsolePrintStats("Survey", false, summaryOut, "4G", primarySortColumn)
 		} else {
 			fmt.Println("survey file name requiered")
 		}
