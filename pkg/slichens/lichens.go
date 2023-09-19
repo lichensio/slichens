@@ -1,97 +1,73 @@
 package slichens
 
 import (
-	"github.com/lichensio/slichens/pkg/student"
-	"gonum.org/v1/gonum/floats"
-	"gonum.org/v1/gonum/stat"
+	"github.com/lichensio/slichens/pkg/stats"
 	"math"
-	"sort"
 )
 
-func SurveyStatGen(data SurveyResult) SurveySummary {
-	var result SurveySummary
-	result.Stat = make(map[SurveyKey]SurveyStat)
-	result.SurveyType = data.SurveyType
-	result.Filename = data.Filename
+func NewSurveyStatsSummary(surveytype string) *SurveySummary {
+	return &SurveySummary{
+		SurveyType: surveytype,
+		Stat:       make(stats.SurveyStatsMap),
+		Min:        math.MaxFloat64,
+		Max:        -math.MaxFloat64,
+	}
+}
+
+func (fm *SurveySummary) Set(key SurveyKey, value stats.SurveyStats) {
+	fm.Stat[key] = value
+	if value["RSSI"].Mean < fm.Min {
+		fm.Min = value["RSSI"].Mean
+	}
+	if value["RSSI"].Mean > fm.Max {
+		fm.Max = value["RSSI"].Mean
+	}
+}
+
+func NewSurveyDeltaSummary(surveytype string, deltatype DeltaType) *SurveyDeltaStatsSummary {
+	return &SurveyDeltaStatsSummary{
+		SurveyType: surveytype,
+		DeltaStats: make(SurveyDeltaMap),
+		DeltaType:  deltatype,
+		Min:        math.MaxFloat64,
+		Max:        -math.MaxFloat64,
+	}
+}
+
+func (fm *SurveyDeltaStatsSummary) Set(key SurveyKey, value stats.SurveyDeltaStats) {
+	fm.DeltaStats[key] = value
+	if value["RSSI"].Delta < fm.Min {
+		fm.Min = value["RSSI"].Delta
+	}
+	if value["RSSI"].Delta > fm.Max {
+		fm.Max = value["RSSI"].Delta
+	}
+}
+
+func SurveyStatGen(data SurveyInfo) SurveySummary {
+
+	result := NewSurveyStatsSummary(data.SurveyType)
+
 	for key, slice := range data.Surveys {
-		var data []float64
-		var statsurvey SurveyStat
-		for _, j := range slice {
-			data = append(data, j.RSRP)
+
+		var stats map[string]stats.Stats
+
+		switch key.NetworkType {
+		case "2G":
+			calculator := &TwoGCalculator{}
+			stats = calculator.Calculate(slice)
+		case "3G":
+			calculator := &ThreeGCalculator{}
+			stats = calculator.Calculate(slice)
+		case "4G":
+			calculator := &FourGCalculator{}
+			stats = calculator.Calculate(slice)
+		default:
+			// Handle default or unknown case, maybe log an error or return.
 		}
-		sort.Float64s(data)
-		statsurvey.RSRPMax = floats.Max(data)
-		statsurvey.RSRPMin = floats.Min(data)
-		statsurvey.RSRPRange = statsurvey.RSRPMax - statsurvey.RSRPMin
-		statsurvey.Number = uint(len(data))
-		statsurvey.RSRPMean = stat.Mean(data, nil)
-		statsurvey.RSRPVariance = stat.Variance(data, nil)
-		statsurvey.RSRPStandardDeviation = math.Sqrt(statsurvey.RSRPVariance)
-		statsurvey.RSRPMedian = stat.Quantile(0.5, stat.Empirical, data, nil)
-
-		result.Stat[key] = statsurvey
-
+		result.Set(key, stats)
 	}
-	return result
-}
-
-func Select(data SurveyStatMap, filter SurveyKey) SurveyStatMap {
-	for k, _ := range data {
-		if !KeyFilter(k, filter) {
-			delete(data, k)
-		}
-	}
-	return data
-}
-
-func SurveySampleRemove(data SurveyMap, number int) SurveyMap {
-	for key, item := range data {
-		if len(item) < number+1 {
-			delete(data, key)
-		}
-	}
-	return data
-}
-
-func StatRemove(data SurveyStatMap, level float64) SurveyStatMap {
-	for key, item := range data {
-		if item.RSRPMean <= level {
-			delete(data, key)
-		}
-	}
-	return data
-}
-
-func KeyFilter(item, filter SurveyKey) bool {
-
-	if filter.NetName == "" && filter.Band == 0 && filter.CellID == 0 {
-		return true
-	}
-	// one key
-	if filter.NetName == "" && filter.Band == 0 && filter.CellID == item.CellID {
-		return true
-	}
-	if filter.NetName == "" && filter.Band == item.Band && filter.CellID == 0 {
-		return true
-	}
-	if filter.NetName == item.NetName && filter.Band == 0 && filter.CellID == 0 {
-		return true
-	}
-	// two keys
-	if filter.NetName == item.NetName && filter.Band == item.Band && filter.CellID == 0 {
-		return true
-	}
-	if filter.NetName == item.NetName && filter.Band == 0 && filter.CellID == item.CellID {
-		return true
-	}
-	if filter.NetName == "" && filter.Band == item.Band && filter.CellID == item.CellID {
-		return true
-	}
-	// 3 keys
-	if filter == item {
-		return true
-	}
-	return false
+	return *result
 }
 
 func KeysSurvey(survey SurveyMap) []SurveyKey {
@@ -117,80 +93,10 @@ func CompareInts(a, b int) int {
 	return 0
 }
 
-func SurveyTwoSamplesMerge(out, in SurveySummary) (SurveyTwoSamplesSummary, SurveyTwoSamplesSummary, SurveyTwoSamplesSummary) {
-	var mergedData, onlyOut, onlyIn SurveyTwoSamplesSummary
-	mergedData.Data = make(map[SurveyKey]SurveyTwoSamples)
-	onlyOut.Data = make(map[SurveyKey]SurveyTwoSamples)
-	onlyIn.Data = make(map[SurveyKey]SurveyTwoSamples)
-	mergedData.SurveyType = out.SurveyType
-	mergedData.Filename1 = out.Filename
-	mergedData.Filename2 = in.Filename
-	onlyOut.Filename1 = out.Filename
-	onlyOut.Filename2 = in.Filename
-	onlyIn.Filename1 = out.Filename
-	onlyIn.Filename2 = in.Filename
-
-	var avgOutIn SurveyTwoSamples
-
-	// Mapping data from out and in
-	for keyo, itemo := range out.Stat {
-		if itemi, ok := in.Stat[keyo]; ok { // If keyo is present in in.Stat
-			avgOutIn.RSRPavOut = itemo.RSRPMean
-			avgOutIn.RSRPavIn = itemi.RSRPMean
-			avgOutIn.RSRPmaxOut = itemo.RSRPMax
-			avgOutIn.RSRPmaxIn = itemi.RSRPMax
-			avgOutIn.RSRPminOut = itemo.RSRPMin
-			avgOutIn.RSRPminIn = itemi.RSRPMin
-			avgOutIn.RSRPStandardDeviationOut = itemo.RSRPStandardDeviation
-			avgOutIn.RSRPStandardDeviationIn = itemi.RSRPStandardDeviation
-			avgOutIn.DeltaRSRP = itemi.RSRPMean - itemo.RSRPMean
-
-			avgOutIn.Number2 = itemi.Number
-			avgOutIn.Number1 = itemo.Number
-
-			s2no := (avgOutIn.RSRPStandardDeviationOut * avgOutIn.RSRPStandardDeviationOut) / float64(itemo.Number)
-			s2ni := (avgOutIn.RSRPStandardDeviationIn * avgOutIn.RSRPStandardDeviationIn) / float64(itemi.Number)
-			avgOutIn.T = (avgOutIn.RSRPavOut - avgOutIn.RSRPavIn) / math.Sqrt(s2no+s2ni)
-			dfnum := math.Pow(s2no+s2ni, 2.0)
-			dfDen := math.Pow(s2no, 2.0)/(float64(itemo.Number)-1.0) + math.Pow(s2ni, 2.0)/(float64(itemi.Number)-1.0)
-			avgOutIn.Df = dfnum / dfDen
-			avgOutIn.P = 2 * (1 - student.StudentCDF(avgOutIn.T, avgOutIn.Df))
-			mergedData.Data[keyo] = avgOutIn
-		} else {
-			avgOutIn.RSRPavOut = itemo.RSRPMean
-			avgOutIn.Number1 = itemo.Number
-			avgOutIn.Number2 = 0
-			onlyOut.Data[keyo] = avgOutIn
-		}
-	}
-
-	for keyi, itemi := range in.Stat {
-		if _, ok := out.Stat[keyi]; !ok { // If keyi is not present in out.Stat
-			avgOutIn.RSRPavOut = itemi.RSRPMean
-			avgOutIn.Number1 = 0
-			avgOutIn.Number2 = itemi.Number
-			onlyIn.Data[keyi] = avgOutIn
-		}
-	}
-
-	return mergedData, onlyOut, onlyIn
-}
-
 func GetKeys[K SurveyKey, V any](m map[K]V) []K {
 	keys := make([]K, 0, len(m))
 	for k := range m {
 		keys = append(keys, k)
 	}
 	return keys
-}
-
-func Max(x, y float64) float64 {
-	return math.Max(x, y)
-}
-
-func maxUint(a, b uint) uint {
-	if a > b {
-		return a
-	}
-	return b
 }

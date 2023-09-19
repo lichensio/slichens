@@ -15,28 +15,24 @@ import (
  * THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-func ProcessSurvey(filename string, allStat, freq, sample bool) (slichens.KeySlice, slichens.SurveySummary, error) {
+func ProcessSurvey(filename string, allStat, freq, sample bool) (slichens.SurveySummary, error) {
 	if filename == "" {
 		fmt.Println("Please provide a siretta survey file name, L____.CSV")
-		return nil, slichens.SurveySummary{}, fmt.Errorf("Please provide a siretta survey file name, L____.CSV")
+		return slichens.SurveySummary{}, fmt.Errorf("Please provide a siretta survey file name, L____.CSV")
 	}
 
 	// Get the survey data from the file
 	survey, err := slichens.ReadMultiCSV(filename)
 	if err != nil {
 		fmt.Println("Error reading CSV:", err)
-		return nil, slichens.SurveySummary{}, fmt.Errorf("Error reading CSV:", err)
+		return slichens.SurveySummary{}, fmt.Errorf("Error reading CSV:", err)
 	}
 
 	surveys := survey.Surveys
+
 	if sample {
 		surveys = slichens.SurveySampleRemove(surveys, slichens.MinimumSampleCount) // Removed magic number, used '2' directly here as specified in your original code
 	}
-
-	keys := slichens.KeysSurvey(surveys)
-	sortFunc := slichens.GetSortFunctions(freq)
-	sorter := slichens.NewMultiSorter(sortFunc...)
-	sorter.Sort(keys)
 
 	summary := slichens.SurveyStatGen(survey)
 	key := &slichens.SurveyKey{
@@ -44,9 +40,9 @@ func ProcessSurvey(filename string, allStat, freq, sample bool) (slichens.KeySli
 		CellID:  0,
 		NetName: "",
 	}
-	summary.Stat = slichens.Select(summary.Stat, *key)
+	summary.Stat = slichens.SelectStats(summary.Stat, *key)
 
 	// currentTime := time.Now()
 	// SurveyConsolePrint("Survey", currentTime, allStat, freq, keys, summary)
-	return keys, summary, nil
+	return summary, nil
 }

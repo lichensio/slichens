@@ -1,21 +1,50 @@
 package slichens
 
-import "time"
+import (
+	"github.com/lichensio/slichens/pkg/stats"
+	"time"
+)
 
 const MinimumSampleCount = 2
 const MinimumSignalLevel = -129.99
 
+type GSMAType int64
+
+const (
+	GSM GSMAType = iota
+	ThreeG
+	FourG
+	FiveG
+)
+
+type DeltaType string
+
+const (
+	IndoorOutdoor DeltaType = "IndoorOutdoor"
+	IndoorBooster DeltaType = "IndoorBooster"
+)
+
+type SurveyDeltaStatsSummary struct {
+	SurveyType string
+	DeltaStats SurveyDeltaMap
+	DeltaType  DeltaType
+	Min        float64
+	Max        float64
+}
+
+type SurveyDeltaMap map[SurveyKey]stats.SurveyDeltaStats
+
 type SurveyKey struct {
-	Band    int    // 0 all
-	CellID  int    // 0 all
-	NetName string // all all
-	Type    string
+	Band        int    // 0 all
+	CellID      int    // 0 all
+	NetName     string //
+	NetworkType string
 }
 
 // Front structure and information about the survey
 // and back data of the survey in Survey
 
-type SurveyResult struct {
+type SurveyInfo struct {
 	SurveyType         string
 	FileCreated        time.Time
 	IMEINumber         string
@@ -27,7 +56,9 @@ type SurveyResult struct {
 	Surveys            SurveyMap
 }
 
-type KeySlice []SurveyKey
+type SurveyMap map[SurveyKey]SurveyDataSlice
+
+type SurveyDataSlice []SurveyData
 
 type SurveyData struct {
 	Survey     int
@@ -58,61 +89,9 @@ type SurveyData struct {
 	Signal     string
 }
 
-type SurveyDataSlice []SurveyData
-
-type SurveyMap map[SurveyKey]SurveyDataSlice
-
-type SurveyStat struct {
-	Number                uint
-	RSRPMean              float64
-	RSRPMedian            float64
-	RSRPMode              float64
-	RSRPRange             float64
-	RSRPQuartiles         float64
-	RSRPMin               float64
-	RSRPMax               float64
-	RSRPVariance          float64
-	RSRPSkewness          float64
-	RSRPKurtosis          float64
-	RSRPStandardDeviation float64
-}
-
-type SurveyStatMap map[SurveyKey]SurveyStat
-
 type SurveySummary struct {
 	SurveyType string
-	Filename   string
-	Stat       SurveyStatMap
-}
-
-type SurveyTwoSamples struct {
-	Number1                  uint
-	Number2                  uint
-	RSRPavOut                float64
-	RSRQavOut                float64
-	RSRPmaxOut               float64
-	RSRQmaxOut               float64
-	RSRPminOut               float64
-	RSRQminOut               float64
-	RSRPStandardDeviationOut float64
-	RSRPavIn                 float64
-	RSRQavIn                 float64
-	RSRPmaxIn                float64
-	RSRQmaxIn                float64
-	RSRPminIn                float64
-	RSRQminIn                float64
-	RSRPStandardDeviationIn  float64
-	DeltaRSRP                float64
-	DeltaRSRQ                float64
-	T                        float64
-	P                        float64
-	Df                       float64
-}
-
-type SurveyTwoSamplesMap map[SurveyKey]SurveyTwoSamples
-
-type SurveyTwoSamplesSummary struct {
-	SurveyType           string
-	Filename1, Filename2 string
-	Data                 SurveyTwoSamplesMap
+	Stat       stats.SurveyStatsMap
+	Min        float64
+	Max        float64
 }

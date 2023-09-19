@@ -24,8 +24,9 @@ var gainCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		out, _ := cmd.Flags().GetString("indoor")
 		in, _ := cmd.Flags().GetString("mbooster")
+		primarySortColumn, _ := cmd.Flags().GetString("primarySortColumn")
 		if out != "" && in != "" {
-			gain.Gain(out, in, Verbose, Freq, Sample, level)
+			gain.ProcessGain(out, in, primarySortColumn)
 		} else {
 			fmt.Println("survey files name required")
 		}
@@ -42,10 +43,7 @@ func init() {
 	// gainCmd.PersistentFlags().String("foo", "", "A help for foo")
 	gainCmd.PersistentFlags().String("indoor", "", "Indoor siretta filename Lxxxxx.csv")
 	gainCmd.PersistentFlags().String("mbooster", "", "Improved Indoor siretta filename Lxxxxx.csv")
-	gainCmd.PersistentFlags().BoolVarP(&Verbose, "verbose", "v", false, "verbose statistic output")
-	gainCmd.PersistentFlags().BoolVarP(&Freq, "band", "b", false, "Sorted by frequency band")
-	gainCmd.PersistentFlags().BoolVarP(&Sample, "exclude", "s", false, "Remove CellID having less than 3 samples")
-	gainCmd.PersistentFlags().BoolVarP(&level, "level", "l", false, "Remove stat having power signal less than 139 db")
+	gainCmd.PersistentFlags().String("primarySortColumn", "", "primary Sort Column: BAND, MNO. Default POWER")
 	// Cobra supports local flags which will only run when this command
 	// is called directly, e.g.:
 	// gainCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")

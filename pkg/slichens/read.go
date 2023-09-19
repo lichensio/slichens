@@ -14,8 +14,8 @@ import (
 
 const headerRows = 14
 
-func ReadMultiCSV(filename string) (SurveyResult, error) {
-	var survey SurveyResult
+func ReadMultiCSV(filename string) (SurveyInfo, error) {
+	var survey SurveyInfo
 
 	if !isValidSirettaLFilename(filename) {
 		return survey, fmt.Errorf("invalid filename pattern")
@@ -43,7 +43,7 @@ func ReadMultiCSV(filename string) (SurveyResult, error) {
 		// Extract relevant information based on the current header row.
 		switch i {
 		case 6:
-			survey.SurveyType = record[1]
+			survey.SurveyType = strings.TrimSpace(record[1])
 			// fmt.Println(record[1])
 		case 7:
 			// fmt.Println(record[1])
@@ -66,7 +66,6 @@ func ReadMultiCSV(filename string) (SurveyResult, error) {
 		// Allow for variable columns per row.
 		reader.FieldsPerRecord = 0
 	}
-
 	// fmt.Println(survey)
 	// Parsing survey data
 	for {
@@ -105,8 +104,9 @@ func parseSurveyData(record []string) (SurveyData, SurveyKey, error) {
 	// error handling and parsing would be much more exhaustive.
 	// You can also consider breaking this into smaller functions.
 	surveyData.Survey, _ = strconv.Atoi(record[0])
+
 	surveyData.Timestamp, _ = time.Parse("01/02/06 15:04:05", record[1])
-	surveyData.Network = record[2]
+	// surveyData.Network = record[2]
 	surveyData.Index, _ = strconv.Atoi(record[3])
 	surveyData.XRFCN, _ = strconv.Atoi(record[4])
 	surveyData.DBM, _ = strconv.ParseFloat(record[5], 64)
@@ -114,11 +114,10 @@ func parseSurveyData(record []string) (SurveyData, SurveyKey, error) {
 	surveyData.RSSI, _ = strconv.ParseFloat(record[7], 64)
 	surveyData.MCC, _ = strconv.Atoi(record[8])
 	surveyData.MNC, _ = strconv.Atoi(record[9])
-	key.CellID, _ = strconv.Atoi(record[10])
+
 	surveyData.LACTAC, _ = strconv.Atoi(record[11])
 	surveyData.BandNum, _ = strconv.Atoi(record[12])
-	frequencyParts := strings.Split(record[13], " ")
-	key.Band, _ = strconv.Atoi(frequencyParts[0])
+
 	surveyData.BSIC = record[14]
 	surveyData.SCR = record[15]
 	surveyData.ECIO = record[16]
@@ -130,6 +129,11 @@ func parseSurveyData(record []string) (SurveyData, SurveyKey, error) {
 	surveyData.DL, _ = strconv.ParseFloat(record[22], 64)
 	surveyData.UL, _ = strconv.ParseFloat(record[23], 64)
 
+	key.NetworkType = record[2]
+
+	key.CellID, _ = strconv.Atoi(record[10])
+	frequencyParts := strings.Split(record[13], " ")
+	key.Band, _ = strconv.Atoi(frequencyParts[0])
 	key.NetName = record[24]
 	return surveyData, key, nil
 }

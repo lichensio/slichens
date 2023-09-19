@@ -1,6 +1,9 @@
 package slichens
 
-import "sort"
+import (
+	"github.com/lichensio/slichens/pkg/stats"
+	"sort"
+)
 
 type LessFunc func(p1, p2 *SurveyKey) int
 
@@ -77,9 +80,85 @@ func GetSortFunctions(freq bool) []LessFunc {
 		}
 		return 0
 	}
-
-	if freq {
-		return []LessFunc{band, netname, cellid}
+	networkType := func(c1, c2 *SurveyKey) int {
+		if c1.NetworkType < c2.NetworkType {
+			return -1
+		} else if c1.NetworkType > c2.NetworkType {
+			return 1
+		}
+		return 0
 	}
-	return []LessFunc{netname, band, cellid}
+	if freq {
+		return []LessFunc{networkType, band, netname, cellid}
+	}
+	return []LessFunc{networkType, netname, band, cellid}
+}
+
+func SurveySampleRemove(data SurveyMap, number int) SurveyMap {
+	for key, item := range data {
+		if len(item) < number+1 {
+			delete(data, key)
+		}
+	}
+	return data
+}
+
+func StatRemove(data stats.SurveyStatsMap, level float64) stats.SurveyStatsMap {
+	for key, item := range data {
+		if item["DBM"].Mean <= level {
+			delete(data, key)
+		}
+	}
+	return data
+}
+
+func SelectStats(data stats.SurveyStatsMap, filter SurveyKey) stats.SurveyStatsMap {
+	// Create a new empty map
+	newData := make(stats.SurveyStatsMap)
+
+	for k, v := range data {
+		if KeyFilter(k, filter) {
+			newData[k] = v
+		}
+	}
+
+	return newData
+}
+
+func SelectDeltaStats(data SurveyDeltaMap, filter SurveyKey) SurveyDeltaMap {
+	// Create a new empty map
+	newData := make(SurveyDeltaMap)
+
+	for k, v := range data {
+		if KeyFilter(k, filter) {
+			newData[k] = v
+		}
+	}
+
+	return newData
+}
+
+func KeyFilter(item, filter SurveyKey) bool {
+
+	// Check NetName
+	if filter.NetName != "" && filter.NetName != item.NetName {
+		return false
+	}
+
+	// Check Band
+	if filter.Band != 0 && filter.Band != item.Band {
+		return false
+	}
+
+	// Check CellID
+	if filter.CellID != 0 && filter.CellID != item.CellID {
+		return false
+	}
+
+	// Check NetworkType
+	if filter.NetworkType != "" && filter.NetworkType != item.NetworkType {
+		return false
+	}
+
+	return true
 }
