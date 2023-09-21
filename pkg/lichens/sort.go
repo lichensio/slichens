@@ -1,6 +1,7 @@
 package lichens
 
 import (
+	"fmt"
 	"sort"
 )
 
@@ -124,7 +125,17 @@ func SelectStats(data SurveyStatsMap, filter SurveyKey) SurveyStatsMap {
 	return newData
 }
 
-func SelectDeltaStats(data SurveyDeltaMap, filter SurveyKey) SurveyDeltaMap {
+func SelectDeltaStats(data SurveyDeltaMap, filter SurveyKey) (SurveyDeltaMap, error) {
+	// Check if data is nil
+	if data == nil {
+		return nil, fmt.Errorf("input data is nil")
+	}
+
+	// Check if filter is valid (this is just a placeholder, adjust as needed)
+	if !isValidFilter(filter) {
+		return nil, fmt.Errorf("provided filter is not valid")
+	}
+
 	// Create a new empty map
 	newData := make(SurveyDeltaMap)
 
@@ -134,7 +145,13 @@ func SelectDeltaStats(data SurveyDeltaMap, filter SurveyKey) SurveyDeltaMap {
 		}
 	}
 
-	return newData
+	return newData, nil
+}
+
+// Placeholder function to check if a filter is valid
+func isValidFilter(filter SurveyKey) bool {
+	// Add your validation logic here. For now, it just returns true.
+	return true
 }
 
 func KeyFilter(item, filter SurveyKey) bool {

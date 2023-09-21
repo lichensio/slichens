@@ -13,17 +13,44 @@ var surveyCmd = &cobra.Command{
 	Short: "Summarize a siretta survey",
 	Long:  `Summarize a siretta survey by making basic statistics over the samples for each cellID, MNO and frequency band observed.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		filename, _ := cmd.Flags().GetString("filename")
+		filename, errorFN := cmd.Flags().GetString("filename")
 		primarySortColumn, _ := cmd.Flags().GetString("primarySortColumn")
-		if filename != "" {
-			fmt.Println(filename)
-			summaryOut, _ := survey.ProcessSurvey(filename, false, false, false)
-			lichens.TableConsolePrintALL("Survey", summaryOut, primarySortColumn)
-			lichens.TableConsolePrintStats("Survey", false, summaryOut, "2G", primarySortColumn)
-			lichens.TableConsolePrintStats("Survey", false, summaryOut, "3G", primarySortColumn)
-			lichens.TableConsolePrintStats("Survey", false, summaryOut, "4G", primarySortColumn)
-		} else {
-			fmt.Println("survey file name requiered")
+
+		if errorFN != nil {
+			fmt.Println("Error retrieving filename:", errorFN)
+			return
+		}
+
+		if filename == "" {
+			fmt.Println("survey file name required")
+			return
+		}
+
+		fmt.Println(filename)
+		summaryOut, errorPS := survey.ProcessSurvey(filename, false, false, false)
+		if errorPS != nil {
+			fmt.Println("survey.ProcessSurvey error:", errorPS)
+			return
+		}
+
+		err1 := lichens.TablePrintALL("Survey", summaryOut, primarySortColumn)
+		err2 := lichens.TablePrintStats("Survey", false, summaryOut, "2G", primarySortColumn)
+		err3 := lichens.TablePrintStats("Survey", false, summaryOut, "3G", primarySortColumn)
+		err4 := lichens.TablePrintStats("Survey", false, summaryOut, "4G", primarySortColumn)
+
+		if err1 != nil || err2 != nil || err3 != nil || err4 != nil {
+			if err1 != nil {
+				fmt.Println("TablePrintALL error:", err1)
+			}
+			if err2 != nil {
+				fmt.Println("TablePrintStats (2G) error:", err2)
+			}
+			if err3 != nil {
+				fmt.Println("TablePrintStats (3G) error:", err3)
+			}
+			if err4 != nil {
+				fmt.Println("TablePrintStats (4G) error:", err4)
+			}
 		}
 	},
 }

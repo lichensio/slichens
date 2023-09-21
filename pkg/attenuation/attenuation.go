@@ -43,18 +43,44 @@ func GenerateDeltaStats(set1, set2 lichens.SurveySummary, DeltaType lichens.Delt
 
 func ProcessAttenuation(filename1, filename2 string, primarySortColumn string) (lichens.SurveyDeltaStatsSummary, error) {
 	if filename1 == "" || filename2 == "" {
-		fmt.Println("Please provide a siretta survey file name 1 & 2, L____.CSV")
-		return lichens.SurveyDeltaStatsSummary{}, fmt.Errorf("Please provide a siretta survey file name  1 & 2, L____.CSV")
+		return lichens.SurveyDeltaStatsSummary{}, fmt.Errorf("Please provide a siretta survey file name 1 & 2, L____.CSV")
 	}
-	summaryOutdoor, _ := survey.ProcessSurvey(filename1, false, false, false)
-	summaryIndoor, _ := survey.ProcessSurvey(filename2, false, false, false)
 
-	lichens.TableConsolePrintALL("Survey Outdoor", summaryOutdoor, primarySortColumn)
-	lichens.TableConsolePrintALL("Survey Indoor", summaryIndoor, primarySortColumn)
+	summaryOutdoor, errOutdoor := survey.ProcessSurvey(filename1, false, false, false)
+	if errOutdoor != nil {
+		return lichens.SurveyDeltaStatsSummary{}, fmt.Errorf("Error processing outdoor survey: %v", errOutdoor)
+	}
 
-	common, uniqueToSetOutdoor, uniqueToSetIndoor, _ := GenerateDeltaStats(summaryOutdoor, summaryIndoor, lichens.IndoorOutdoor)
-	lichens.PrintDeltaStatsTable("Attenuation between Outdoor and Indoor", false, common, "4G", primarySortColumn)
-	lichens.TableConsolePrintALL("Survey unique to Outdoor", uniqueToSetOutdoor, primarySortColumn)
-	lichens.TableConsolePrintALL("Survey unique to Indoor", uniqueToSetIndoor, primarySortColumn)
+	summaryIndoor, errIndoor := survey.ProcessSurvey(filename2, false, false, false)
+	if errIndoor != nil {
+		return lichens.SurveyDeltaStatsSummary{}, fmt.Errorf("Error processing indoor survey: %v", errIndoor)
+	}
+
+	// Assuming the following functions return errors, handle them accordingly
+	if err := lichens.TablePrintALL("Survey Outdoor", summaryOutdoor, primarySortColumn); err != nil {
+		return lichens.SurveyDeltaStatsSummary{}, err
+	}
+
+	if err := lichens.TablePrintALL("Survey Indoor", summaryIndoor, primarySortColumn); err != nil {
+		return lichens.SurveyDeltaStatsSummary{}, err
+	}
+
+	common, uniqueToSetOutdoor, uniqueToSetIndoor, errDelta := GenerateDeltaStats(summaryOutdoor, summaryIndoor, lichens.IndoorOutdoor)
+	if errDelta != nil {
+		return lichens.SurveyDeltaStatsSummary{}, fmt.Errorf("Error generating delta stats: %v", errDelta)
+	}
+
+	if err := lichens.PrintDeltaStatsTable("Attenuation between Outdoor and Indoor", false, common, "4G", primarySortColumn); err != nil {
+		return lichens.SurveyDeltaStatsSummary{}, err
+	}
+
+	if err := lichens.TablePrintALL("Survey unique to Outdoor", uniqueToSetOutdoor, primarySortColumn); err != nil {
+		return lichens.SurveyDeltaStatsSummary{}, err
+	}
+
+	if err := lichens.TablePrintALL("Survey unique to Indoor", uniqueToSetIndoor, primarySortColumn); err != nil {
+		return lichens.SurveyDeltaStatsSummary{}, err
+	}
+
 	return common, nil
 }

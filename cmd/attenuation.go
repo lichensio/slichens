@@ -21,13 +21,31 @@ var attenuationCmd = &cobra.Command{
 	Short: "Attenuation compare outdoor to indoor signal level",
 	Long:  `Attenuation compare outdoor to indoor signal level.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		out, _ := cmd.Flags().GetString("outfile")
-		in, _ := cmd.Flags().GetString("infile")
-		primarySortColumn, _ := cmd.Flags().GetString("primarySortColumn")
+		out, errOut := cmd.Flags().GetString("outfile")
+		in, errIn := cmd.Flags().GetString("infile")
+		primarySortColumn, errSort := cmd.Flags().GetString("primarySortColumn")
+
+		// Check for errors when fetching flags
+		if errOut != nil {
+			fmt.Printf("Error getting outfile: %v\n", errOut)
+			return
+		}
+		if errIn != nil {
+			fmt.Printf("Error getting infile: %v\n", errIn)
+			return
+		}
+		if errSort != nil {
+			fmt.Printf("Error getting primarySortColumn: %v\n", errSort)
+			return
+		}
+
 		if out != "" && in != "" {
-			attenuation.ProcessAttenuation(out, in, primarySortColumn)
+			if _, err := attenuation.ProcessAttenuation(out, in, primarySortColumn); err != nil {
+				fmt.Printf("Error processing attenuation: %v\n", err)
+				return
+			}
 		} else {
-			fmt.Println("survey files name requiered")
+			fmt.Println("Both outfile and infile are required")
 		}
 	},
 }

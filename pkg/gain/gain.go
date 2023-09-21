@@ -15,12 +15,12 @@ func ProcessGain(filename1, filename2 string, primarySortColumn string) (lichens
 	summaryindoor, _ := survey.ProcessSurvey(filename1, false, false, false)
 	summarybooster, _ := survey.ProcessSurvey(filename2, false, false, false)
 
-	lichens.TableConsolePrintALL("Survey Indoor", summaryindoor, primarySortColumn)
-	lichens.TableConsolePrintALL("Survey Booster", summarybooster, primarySortColumn)
+	lichens.TablePrintALL("Survey Indoor", summaryindoor, primarySortColumn)
+	lichens.TablePrintALL("Survey Booster", summarybooster, primarySortColumn)
 
 	common, uniqueToSetOutdoor, uniqueToSetIndoor, _ := attenuation.GenerateDeltaStats(summaryindoor, summarybooster, lichens.IndoorBooster)
-	lichens.TableConsolePrintALL("Survey unique to Indoor", uniqueToSetOutdoor, primarySortColumn)
-	lichens.TableConsolePrintALL("Survey unique to Booster", uniqueToSetIndoor, primarySortColumn)
+	lichens.TablePrintALL("Survey unique to Indoor", uniqueToSetOutdoor, primarySortColumn)
+	lichens.TablePrintALL("Survey unique to Booster", uniqueToSetIndoor, primarySortColumn)
 	lichens.PrintDeltaStatsTable("Gain between Indoor and Booster", false, common, "4G", primarySortColumn)
 	return common, nil
 }

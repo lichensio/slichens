@@ -1,6 +1,7 @@
 package lichens
 
 import (
+	"fmt"
 	"math"
 )
 
@@ -15,11 +16,11 @@ func NewSurveyStatsSummary(surveytype string) *SurveySummary {
 
 func (fm *SurveySummary) Set(key SurveyKey, value SurveyStats) {
 	fm.Stat[key] = value
-	if value["RSSI"].Mean < fm.Min {
-		fm.Min = value["RSSI"].Mean
+	if value["DBM"].Mean < fm.Min {
+		fm.Min = value["DBM"].Mean
 	}
-	if value["RSSI"].Mean > fm.Max {
-		fm.Max = value["RSSI"].Mean
+	if value["DBM"].Mean > fm.Max {
+		fm.Max = value["DBM"].Mean
 	}
 }
 
@@ -35,11 +36,11 @@ func NewSurveyDeltaSummary(surveytype string, deltatype DeltaType) *SurveyDeltaS
 
 func (fm *SurveyDeltaStatsSummary) Set(key SurveyKey, value SurveyDeltaStats) {
 	fm.DeltaStats[key] = value
-	if value["RSSI"].Delta < fm.Min {
-		fm.Min = value["RSSI"].Delta
+	if value["DBM"].Delta < fm.Min {
+		fm.Min = value["DBM"].Delta
 	}
 	if value["RSSI"].Delta > fm.Max {
-		fm.Max = value["RSSI"].Delta
+		fm.Max = value["DBM"].Delta
 	}
 }
 
@@ -69,10 +70,20 @@ func SurveyStatGen(data SurveyInfo) SurveySummary {
 	return *result
 }
 
-func GetKeys[K SurveyKey, V any](m map[K]V) []K {
+func GetKeys[K SurveyKey, V any](m map[K]V) ([]K, error) {
+	// Check if the map is nil
+	if m == nil {
+		return nil, fmt.Errorf("input map is nil")
+	}
+
+	// Check if the map is empty
+	if len(m) == 0 {
+		return nil, fmt.Errorf("input map is empty")
+	}
+
 	keys := make([]K, 0, len(m))
 	for k := range m {
 		keys = append(keys, k)
 	}
-	return keys
+	return keys, nil
 }

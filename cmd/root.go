@@ -21,16 +21,17 @@ var cfgFile string
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
-	Use:   "lichens",
-	Short: "lichens, CLI tool to analyse siretta survey csv files",
-	Long: `lichens a CLI tool to analyse siretta survey csv file. For example:
-
-Calculate average, min, max and sd of a survey per MNO and per Band.
-Compare outdoor to indoor survey to evaluate indoor attenuation.
-Compare two indoor surveys in order to evaluate possible improvements.`,
+	Use:   "siretta survey CLI Tool",
+	Short: "siretta, CLI tool to analyse Siretta survey csv files",
+	Long: `siretta a CLI tool to analyse Siretta survey csv file. For example:
+	Calculate average, min, max and sd of a survey per MNO and per Band.
+    Compare outdoor to indoor survey to evaluate indoor attenuation.
+    Compare two indoor surveys in order to evaluate possible improvements.`,
 	// Uncomment the following line if your bare application
 	// has an action associated with it:
-	Run: func(cmd *cobra.Command, args []string) { fmt.Println("Hello lichens tool") },
+	Run: func(cmd *cobra.Command, args []string) {
+		fmt.Println("Hello siretta survey CLI Tool, pls use siretta -h to get more information")
+	},
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
